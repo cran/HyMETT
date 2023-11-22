@@ -1,0 +1,2041 @@
+---
+title: "Report: Many Sites"
+author: "Generated through the HyMETT R package."
+output:
+  rmdformats::html_clean:
+    thumbnails: false
+    lightbox: true
+    gallery: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# mandatory libraries
+library(tidyverse)
+library(tidyr)
+# speed-enhancing libraries
+library(data.table)
+# report-enhancing libraries
+library(DT)
+library(maps)
+# libraries just for introduction/study site sections
+library(leaflet)
+library(dataRetrieval)
+library(cowplot)
+library(sf) 
+library(HyMETT)
+library(dplyr)
+library(RColorBrewer)
+
+# Used for non interactive plots
+  # library(rnaturalearth) # Used for non interactive plots
+
+# folder containing tool output - this will be an argument in the "generate report" function eventually
+input_folder <- paste0(system.file("extdata", package = "HyMETT"),"/")
+# default values
+sites <- list.files(input_folder) # example sites
+sites <- sites[!sites == "HyMETT_run.txt" ]
+sites <- unlist(lapply(sites, function(x) strsplit(x, "_")[[1]][1]))
+sites <- unique(sites)
+
+site_info_path <- 'site_info.csv'
+```
+
+
+```{r echo = F, warning = F, message = F}
+# Pull in important data 
+
+# clock_start <- Sys.time()
+
+run_info <- read.table(file = paste0(input_folder,"HyMETT_run.txt"), sep = "\t",
+                       colClasses = c("character", rep("Date",2), rep("numeric",2) , "character", 
+                                      rep("logical",3)), header = TRUE)
+not_run <- run_info[run_info$run_hymett == FALSE,]
+run_info <- run_info[run_info$run_hymett == TRUE,]
+
+#### Empty DFs ####
+ALL_obs_daily <- data.frame(matrix(nrow = 0, ncol = 13))
+ALL_obs_annual <- data.frame(matrix(nrow = 0, ncol = 90))
+ALL_obs_monthly <- data.frame(matrix(nrow = 0, ncol = 5))
+ALL_obs_trend <- data.frame(matrix(nrow = 0, ncol = 10))
+
+ALL_mod_daily <- data.frame(matrix(nrow = 0, ncol = 13))
+ALL_mod_annual <- data.frame(matrix(nrow = 0, ncol = 90))
+ALL_mod_monthly <- data.frame(matrix(nrow = 0, ncol = 5))
+ALL_mod_trend <- data.frame(matrix(nrow = 0, ncol = 10))
+
+ALL_comp_trend <- data.frame(matrix(nrow = 0, ncol = 5))
+ALL_gof <- data.frame(matrix(nrow = 0, ncol = 5))
+ALL_gof_report <- data.frame(matrix(nrow = 0, ncol = 15))
+
+ALL_POR_annual_max <- data.frame(matrix(nrow = 0, ncol = 5))
+ALL_POR_annual_min <- data.frame(matrix(nrow = 0, ncol = 5))
+ALL_POR_daily_metrics <- data.frame(matrix(nrow = 0, ncol = 4))
+ALL_POR_monthly_metrics <- data.frame(matrix(nrow = 0, ncol = 4))
+
+# output
+for(site_no in run_info$site_no){
+  message(paste0("################################## Site Number: ",site_no," ################"))
+  
+  x <- read.csv(file = paste0(input_folder,site_no,"_obs_daily.csv"), colClasses = c("character", "Date", rep("numeric",11)))
+  x2 <- read.csv(file = paste0(input_folder,site_no,"_obs_annual.csv"), colClasses = c("character", rep("numeric",24)))
+  x3 <- read.csv(file = paste0(input_folder,site_no,"_obs_monthly.csv"), colClasses = c("character", rep("numeric",3), "Date"))
+  ALL_obs_daily <- rbind(ALL_obs_daily, x)
+  ALL_obs_annual <- rbind(ALL_obs_annual, x2)
+  ALL_obs_monthly <- rbind(ALL_obs_monthly, x3)
+  rm(x,x2,x3)
+  
+  y <- read.csv(file = paste0(input_folder,site_no,"_mod_daily.csv"), colClasses = c("character", "Date", rep("numeric",11)))
+  y2 <- read.csv(file = paste0(input_folder,site_no,"_mod_annual.csv"), colClasses = c("character", rep("numeric",24)))
+  y3 <- read.csv(file = paste0(input_folder,site_no,"_mod_monthly.csv"), colClasses = c("character", rep("numeric",3), "Date"))
+  ALL_mod_daily <- rbind(ALL_mod_daily, y)
+  ALL_mod_annual <- rbind(ALL_mod_annual, y2)
+  ALL_mod_monthly <- rbind(ALL_mod_monthly, y3)
+  rm(y, y2, y3)
+  
+  trend <- run_info$trend[run_info$site_no == site_no]
+  if(trend == TRUE){
+    x4 <- read.csv(file = paste0(input_folder,site_no,"_obs_trend.csv"), colClasses = c(rep("character",2), rep("numeric",8)))
+    y4 <- read.csv(file = paste0(input_folder,site_no,"_mod_trend.csv"), colClasses = c(rep("character",2), rep("numeric",8)))
+    z <- read.csv(file = paste0(input_folder,site_no,"_com_trend.csv"), colClasses = c(rep("character",2), rep("numeric",3)))
+    
+    ALL_obs_trend <- rbind(ALL_obs_trend, x4)
+    ALL_mod_trend <- rbind(ALL_mod_trend, y4)
+    ALL_comp_trend <- rbind(ALL_comp_trend, z)
+    rm(x4,y4,z)
+  }
+  rm(trend)
+  
+  z2 <- read.csv(file = paste0(input_folder,site_no,"_GOF.csv"), colClasses = c(rep("character",3), rep("numeric",2)))
+  z3 <- read.csv(file = paste0(input_folder,site_no,"_GOF_report.csv"), colClasses = c(rep("character",2), rep("numeric",13)))
+  ALL_gof <- rbind(ALL_gof, z2)
+  ALL_gof_report <- rbind(ALL_gof_report, z3)
+  rm(z2,z3)
+  
+  z4 <- read.csv(file = paste0(input_folder,site_no,"_POR_annual_max.csv"), colClasses = c(rep("character",3), rep("numeric",2)))
+  z5 <- read.csv(file = paste0(input_folder,site_no,"_POR_annual_min.csv"), colClasses = c(rep("character",4), "numeric"))
+  z6 <- read.csv(file = paste0(input_folder,site_no,"_POR_daily_metrics.csv"), colClasses = c(rep("character",3), "numeric"))
+  z7 <- read.csv(file = paste0(input_folder,site_no,"_POR_monthly_metrics.csv"), colClasses = c(rep("character",3), "numeric"))
+  ALL_POR_annual_max <- rbind(ALL_POR_annual_max, z4)
+  ALL_POR_annual_min <- rbind(ALL_POR_annual_min, z5)
+  ALL_POR_daily_metrics <- rbind(ALL_POR_daily_metrics, z6)
+  ALL_POR_monthly_metrics <- rbind(ALL_POR_monthly_metrics, z7)
+  rm(z4, z5, z6, z7)
+  
+  rm(site_no)
+}
+
+# clock_end <- Sys.time()
+# clock_runtime <- difftime(clock_end, clock_start, units = c("hours"))
+# print(clock_runtime)
+
+```
+
+
+```{r echo = F, warning = F, message = F}
+
+#------- Import all necessary data
+## GOF - annual
+# gof_old <- import_gof(site = sites, folder = input_folder, verbose = T)
+
+## GOF - annual --- new, reformat 
+gof <- ALL_gof[ALL_gof$site_no %in% sites,]
+
+# set categories
+gof$category <- NA
+gof$category[grepl('mean', gof$annual_stat, ignore.case = T)] <- 'Mean'
+gof$category[grepl('max', gof$annual_stat, ignore.case = T)] <- 'Max'
+gof$category[grepl('min', gof$annual_stat, ignore.case = T)] <- 'Min'
+gof$category[grepl('sum', gof$annual_stat, ignore.case = T)] <- 'Sum'
+gof$category[grepl('percent_annual', gof$annual_stat, ignore.case = T)] <- 'Percent Annual'
+gof$category[grepl('percentile', gof$annual_stat, ignore.case = T)] <- 'Percentile'
+gof$category[grepl('sd', gof$annual_stat, ignore.case = T)] <- 'SD'
+gof$category[grepl('high_q', gof$annual_stat, ignore.case = T)] <- 'High Q'
+gof$category[grepl('low_q', gof$annual_stat, ignore.case = T)] <- 'Low Q'
+# Set order of categories
+gof$category = factor(gof$category, levels = c("Mean", "Min", "Max", "SD",
+                                               "Percent Annual", "Percentile",
+                                               "Low Q", "High Q", "Sum"))
+
+# Rename metrics to formal
+gof$metric[gof$metric == "spearman_rho"] <- "Spearman's Rho"
+gof$metric[gof$metric == "kendall_tau"] <- "Kendall's Tau"
+gof$metric[gof$metric == "pearson_r"] <- "Pearson's R"
+gof$metric[gof$metric == "mean_absolute_error"] <- "MAE"
+gof$metric[gof$metric == "mean_error"] <- "ME"
+gof$metric[gof$metric == "nash_sutcliffe_efficiency"] <- "NSE"
+gof$metric[gof$metric == "percent_bias"] <- "Percent Bias"
+gof$metric[gof$metric == "volumetric_efficiency"] <- "VE"
+
+# Place in tibble and fix annual_stat names
+gof <- gof %>%
+  # to tibble
+  tibble::as_tibble() %>%
+  # reorder columns
+  dplyr::select(site_no, annual_stat, category, metric, value, p_value) %>%
+  # remove julian date data
+  dplyr::filter(!(grepl('_jd', annual_stat))) %>%
+  # fix annual_stat names
+  dplyr::mutate(annual_stat = stringr::str_replace_all(
+    string = annual_stat,
+    pattern = '_max|_mean|_min|_percent_annual|_percentile|_sd|_sum',
+    replacement = '')
+    ) %>%
+  dplyr::mutate(annual_stat = stringr::str_replace_all(
+    string = annual_stat,
+    pattern = "_",
+    replacement = " ")
+  ) %>%
+  # Capitalize first letter
+  dplyr::mutate(annual_stat = stringr::str_to_title(annual_stat)) %>%
+  # Capitalize Qs and Cvd
+  dplyr::mutate(annual_stat = gsub('q', 'Q', annual_stat)) %>%
+  dplyr::mutate(annual_stat = gsub('Cvd', 'CVD', annual_stat)) %>%
+  # Convert Annual Stats to factor and order levels
+  dplyr::mutate(annual_stat = factor(
+    x = annual_stat,
+    levels = rev(c('Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+               'CVD', 'Annual 1', 'Annual 5', 'Annual 10', 'Annual 25', 'Annual 50', 'Annual 75',
+               'Annual 90', 'Annual 95', 'Annual 99', 'High Q1', 'High Q3', 'High Q7', 'High Q30',
+               'Low Q1', 'Low Q3', 'Low Q7', 'Low Q30', 'Annual')))
+    )
+```
+
+
+```{r echo = F, warning = F, message = F}
+
+## Streamflow - Daily
+# daily_sim <- import_dailyQ_sim(site = sites, folder = input_folder, .drop = .drop, verbose = T)
+# daily_obs <- import_dailyQ_obs(site = sites, folder = input_folder, .drop = .drop, verbose = T)
+
+# ## Streamflow - Annual
+# annual_sim <- import_annualQ_sim(site = sites, folder = input_folder, .drop = .drop, verbose = T)
+# annual_obs <- import_annualQ_obs(site = sites, folder = input_folder, .drop = .drop, verbose = T)
+
+#### Trends - Observed
+# filter to sites
+annual_trend_obs <- ALL_obs_trend[ALL_obs_trend$site_no %in% sites,]
+# Select columns
+annual_trend_obs <- annual_trend_obs[, c('site_no', 'annual_stat', 'trend_mag')]
+# set categories
+annual_trend_obs$category <- NA
+annual_trend_obs$category[grepl('mean', annual_trend_obs$annual_stat, ignore.case = T)] <- 'Mean'
+annual_trend_obs$category[grepl('max', annual_trend_obs$annual_stat, ignore.case = T)] <- 'Max'
+annual_trend_obs$category[grepl('min', annual_trend_obs$annual_stat, ignore.case = T)] <- 'Min'
+annual_trend_obs$category[grepl('sum', annual_trend_obs$annual_stat, ignore.case = T)] <- 'Sum'
+annual_trend_obs$category[grepl('percent_annual',
+                                annual_trend_obs$annual_stat, ignore.case = T)] <- 'Percent Annual'
+annual_trend_obs$category[grepl('percentile', annual_trend_obs$annual_stat, ignore.case = T)] <- 'Percentile'
+annual_trend_obs$category[grepl('sd', annual_trend_obs$annual_stat, ignore.case = T)] <- 'SD'
+annual_trend_obs$category[grepl('high_q', annual_trend_obs$annual_stat, ignore.case = T)] <- 'High Q'
+annual_trend_obs$category[grepl('low_q', annual_trend_obs$annual_stat, ignore.case = T)] <- 'Low Q'
+# Set order of categories
+annual_trend_obs$category = factor(annual_trend_obs$category,
+                                   levels = c("Mean", "Min", "Max", "SD",
+                                              "Percent Annual", "Percentile",
+                                              "Low Q", "High Q", "Sum"))
+# Rename metrics to formal
+annual_trend_obs$metric <- 'trend'
+annual_trend_obs <- annual_trend_obs[,c('site_no', 'annual_stat', 'category', 'metric', 'trend_mag')]
+# stick in tibble and fix names
+annual_trend_obs <- annual_trend_obs %>%
+  # to tibble
+  tibble::as_tibble() %>%
+  # reorder columns
+  dplyr::select(site_no, annual_stat, category, metric, trend_mag) %>%
+  # remove julian date data
+  dplyr::filter(!(grepl('_jd', annual_stat))) %>%
+  # fix annual_stat names
+  dplyr::mutate(annual_stat = stringr::str_replace_all(
+    string = annual_stat,
+    pattern = '_max|_mean|_min|_percent_annual|_percentile|_sd|_sum',
+    replacement = '')
+    ) %>%
+  dplyr::mutate(annual_stat = stringr::str_replace_all(
+    string = annual_stat,
+    pattern = "_",
+    replacement = " ")
+  ) %>%
+  # Capitalize first letter
+  dplyr::mutate(annual_stat = stringr::str_to_title(annual_stat)) %>%
+  # Capitalize Qs and Cvd
+  dplyr::mutate(annual_stat = gsub('q', 'Q', annual_stat)) %>%
+  dplyr::mutate(annual_stat = gsub('Cvd', 'CVD', annual_stat)) %>%
+  # Convert Annual Stats to factor and order levels
+  dplyr::mutate(annual_stat = factor(
+    x = annual_stat,
+    levels = (c('Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+                   'CVD', 'Annual 1', 'Annual 5', 'Annual 10', 'Annual 25', 'Annual 50', 'Annual 75',
+                   'Annual 90', 'Annual 95', 'Annual 99', 'High Q1', 'High Q3', 'High Q7', 'High Q30',
+                   'Low Q1', 'Low Q3', 'Low Q7', 'Low Q30', 'Annual')))
+    )
+
+
+
+
+#### Trends - Comp
+#filter to sites
+annual_trend_comp <- ALL_comp_trend
+# Select columns
+annual_trend_comp <- annual_trend_comp[, c('site_no', 'annual_stat', 'val_perc_change_diff')]
+# set categories
+annual_trend_comp$category <- NA
+annual_trend_comp$category[grepl('mean', annual_trend_comp$annual_stat, ignore.case = T)] <- 'Mean'
+annual_trend_comp$category[grepl('max', annual_trend_comp$annual_stat, ignore.case = T)] <- 'Max'
+annual_trend_comp$category[grepl('min', annual_trend_comp$annual_stat, ignore.case = T)] <- 'Min'
+annual_trend_comp$category[grepl('sum', annual_trend_comp$annual_stat, ignore.case = T)] <- 'Sum'
+annual_trend_comp$category[grepl('percent_annual',
+                                 annual_trend_comp$annual_stat,
+                                 ignore.case = T)] <- 'Percent Annual'
+annual_trend_comp$category[grepl('percentile',
+                                 annual_trend_comp$annual_stat,
+                                 ignore.case = T)] <- 'Percentile'
+annual_trend_comp$category[grepl('sd', annual_trend_comp$annual_stat, ignore.case = T)] <- 'SD'
+annual_trend_comp$category[grepl('high_q', annual_trend_comp$annual_stat, ignore.case = T)] <- 'High Q'
+annual_trend_comp$category[grepl('low_q', annual_trend_comp$annual_stat, ignore.case = T)] <- 'Low Q'
+# Set order of categories
+annual_trend_comp$category = factor(annual_trend_comp$category,
+                                    levels = c("Mean", "Min", "Max", "SD",
+                                              "Percent Annual", "Percentile",
+                                              "Low Q", "High Q", "Sum"))
+# Rename metrics to formal
+annual_trend_comp$metric <- 'trend'
+annual_trend_comp <- annual_trend_comp[, c('site_no', 'annual_stat', 'category',
+                                           'metric', 'val_perc_change_diff')]
+# stick in tibble and fix names
+annual_trend_comp <- annual_trend_comp %>%
+  # to tibble
+  tibble::as_tibble() %>%
+  # reorder columns
+  dplyr::select(site_no, annual_stat, category, metric, val_perc_change_diff) %>%
+  # remove julian date data
+  dplyr::filter(!(grepl('_jd', annual_stat))) %>%
+  # fix annual_stat names
+  dplyr::mutate(annual_stat = stringr::str_replace_all(
+    string = annual_stat,
+    pattern = '_max|_mean|_min|_percent_annual|_percentile|_sd|_sum',
+    replacement = '')
+    ) %>%
+  dplyr::mutate(annual_stat = stringr::str_replace_all(
+    string = annual_stat,
+    pattern = "_",
+    replacement = " ")
+  ) %>%
+  # Capitalize first letter
+  dplyr::mutate(annual_stat = stringr::str_to_title(annual_stat)) %>%
+  # Capitalize Qs and Cvd
+  dplyr::mutate(annual_stat = gsub('q', 'Q', annual_stat)) %>%
+  dplyr::mutate(annual_stat = gsub('Cvd', 'CVD', annual_stat)) %>%
+  # Convert Annual Stats to factor and order levels
+  dplyr::mutate(annual_stat = factor(
+    x = annual_stat,
+    levels = (c('Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+                   'CVD', 'Annual 1', 'Annual 5', 'Annual 10', 'Annual 25', 'Annual 50', 'Annual 75',
+                   'Annual 90', 'Annual 95', 'Annual 99', 'High Q1', 'High Q3', 'High Q7', 'High Q30',
+                   'Low Q1', 'Low Q3', 'Low Q7', 'Low Q30', 'Annual')))
+    )
+
+```
+
+------
+
+## Introduction
+This report provides goodness-of-fit measurements between modeled and observational streamflow at `r length(sites)` gauged sites. Measures of model skill applied here are percent bias, volumetric efficiency (VE), Spearman's rho correlation, and normalized root mean square error (NRMSE). These metrics are applied to numerous streamflow statistics summarizing streamflow at daily, monthly, annual, and period-of-record timesteps. Streamflow statistics include mean, minima, maxima, percent of annual, standard deviation, percentiles, and multi-day high flows (Q). 
+
+------
+
+## Study sites
+```{r echo = F, warning = F, message = F}
+## Map site location via leaflet
+# Get site coordinates
+site_coord <- tryCatch({
+  # import site information
+  #data.table::fread(input = paste0(input_folder,'site_info.csv'), data.table = F) %>%
+  data.table::fread(input = site_info_path, data.table = F) %>%
+    tibble::as_tibble() %>%
+    dplyr::mutate(site = as.character(site)) %>%
+    dplyr::mutate(site = stringr::str_pad(string = site,
+                                          width = 8,
+                                          side = 'left',
+                                          pad = '0')) %>%
+    dplyr::filter(site %in% sites) %>%
+    dplyr::mutate(site_name = stringr::str_to_title(site_name))
+}, error = function(e){ NULL })
+
+# Create map object if coordinates are available
+if (!is.null(site_coord)){
+  leaflet::leaflet(width = "100%") %>%
+    leaflet::addTiles() %>%
+    # leaflet::addMarkers(data = site_coord, lng = ~lon, lat = ~lat, popup = ~site) %>%
+    leaflet::addCircleMarkers(data = site_coord,
+                              lng = ~lon,
+                              lat = ~lat,
+                              # radius = 5,
+                              radius = ~ ((drain_area/mean(drain_area)) + 4),
+                              weight = 1,
+                              popup = paste("Site ID:", site_coord$site, "<br>",
+                                            "Agency:", site_coord$agency, "<br>",
+                                            "Name:", site_coord$site_name, "<br>",
+                                            "Altitude:", site_coord$altitude, "ft", "<br>")
+                              )
+}
+# Create text warning if site coordinates were not available
+coord_warn <- ifelse(test = is.null(site_coord),
+                     yes = "Warning: Study site coordinates error",
+                     no = "")
+
+# (add warning in text below)
+```
+
+Markers indicating locations of study sites summarized in this report, sized according to relative drainage basin area.
+
+`r coord_warn`
+
+```{r echo = F, warning = F, message = F}
+# Calculate mean daily Q for each site
+daily_mean_sim <- ALL_mod_daily %>%
+  dplyr::select(site_no, value) %>%
+  dplyr::group_by(site_no) %>%
+  dplyr::summarise(meanQ = mean(value, na.rm = T)) %>%
+  dplyr::rename(`Mean Daily Q - Simulated [cfs]` = meanQ)
+daily_mean_obs <- ALL_obs_daily %>%
+  dplyr::select(site_no, value) %>%
+  dplyr::group_by(site_no) %>%
+  dplyr::summarise(meanQ = mean(value, na.rm = T)) %>%
+  dplyr::rename(`Mean Daily Q - Observed [cfs]` = meanQ)
+daily_mean <- dplyr::full_join(daily_mean_obs, daily_mean_sim, by = 'site_no') %>%
+  dplyr::mutate_if(is.numeric, round, digits = 2)
+
+# Generate table of mean values over POR
+DT::datatable(daily_mean)
+```
+
+
+------
+
+## Period-of-Record plots {.tabset .tabset-pills}
+
+### Daily {.tabset}
+```{r results='asis', echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=7}
+## Format data
+por <- ALL_POR_daily_metrics %>%
+  dplyr::filter(site_no %in% sites) %>%
+  tibble::as_tibble() %>%
+  tidyr::pivot_wider(names_from = "data",
+                     values_from = "value") %>%
+  dplyr::mutate(category = dplyr::case_when(
+    substr(metric,1,1) == 'p' ~ 'Percentile',
+    substr(metric,1,3) == 'POR' ~ 'Variability',
+    TRUE ~ 'Shape'
+  )) %>%
+  dplyr::mutate(metric = dplyr::case_when(
+    metric == "p1" ~ "1st",
+    metric == "p5" ~ "5th",
+    metric == "p10" ~ "10th",
+    metric == "p25" ~ "25th",
+    metric == "p50" ~ "50th",
+    metric == "p75" ~ "75th",
+    metric == "p90" ~ "90th",
+    metric == "p95" ~ "95th",
+    metric == "p99" ~ "99th",
+    metric == "POR_mean" ~ "Mean",
+    metric == "POR_sd" ~ "SD",
+    metric == "POR_cv" ~ "CV",
+    metric == "POR_min" ~ "Min",
+    metric == "POR_max" ~ "Max",
+    metric == "LCV" ~ "LCV",
+    metric == "Lskew" ~ "L-Skew",
+    metric == "Lkurtosis" ~ "L-Kurtosis",
+    metric == "lag1_autocorrelation" ~ "Lag-1 Autocorrelation",
+    metric == "seasonal_amplitude" ~ "Seasonal Amplitude",
+    metric == "seasonal_phase" ~ "Seasonal Phase"
+  )) %>%
+  dplyr::mutate(metric = factor(metric, levels = c("1st", "5th", "10th", "25th", "50th", "75th",
+                                                     "90th", "95th", "99th", "Mean", "SD", "CV",
+                                                     "Min", "Max", "LCV", "L-Skew", "L-Kurtosis",
+                                                     "Lag-1 Autocorrelation", "Seasonal Amplitude",
+                                                     "Seasonal Phase")))
+
+
+
+## Plot
+categories <- unique(por$category)
+for (i in 1:length(categories)){
+  cat("#### ", categories[i], "\n");
+  
+  print(
+      ggplot2::ggplot(data = dplyr::filter(por, category == categories[i]),
+                  aes(x = observed, y = modeled)) +
+    ggplot2::geom_point() +
+    ggplot2::theme_bw() +
+    ggplot2::facet_wrap(facets = ggplot2::vars(metric),
+                        scales = 'free') +
+    ggplot2::geom_abline(slope = 1) + 
+    ggplot2::labs(x = 'Observed',
+                  y = 'Modeled',
+                  title = categories[i]) +
+    ggplot2::theme(panel.spacing = ggplot2::unit(1, 'lines'),
+                   strip.background = ggplot2::element_blank(),
+                   strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                   plot.title = element_text(hjust = 0.5),
+                   plot.subtitle = element_text(hjust = 0.5),
+                   plot.caption = ggplot2::element_text(hjust = 0.5))
+  )
+
+  
+  cat('\n\n')
+}
+```
+
+
+### Monthly {.tabset}
+```{r results='asis', echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+## Format data
+por <- ALL_POR_monthly_metrics %>%
+  dplyr::filter(site_no %in% sites) %>%
+  tibble::as_tibble() %>%
+  tidyr::pivot_wider(names_from = "data",
+                     values_from = "value") %>%
+  dplyr::mutate(category = dplyr::case_when(
+    substr(metric,1,1) == 'p' ~ 'Percentile',
+    substr(metric,1,3) == 'POR' ~ 'Variability',
+    TRUE ~ 'Shape'
+  )) %>%
+  dplyr::mutate(metric = dplyr::case_when(
+    metric == "p1" ~ "1st",
+    metric == "p5" ~ "5th",
+    metric == "p10" ~ "10th",
+    metric == "p25" ~ "25th",
+    metric == "p50" ~ "50th",
+    metric == "p75" ~ "75th",
+    metric == "p90" ~ "90th",
+    metric == "p95" ~ "95th",
+    metric == "p99" ~ "99th",
+    metric == "POR_mean" ~ "Mean",
+    metric == "POR_sd" ~ "SD",
+    metric == "POR_cv" ~ "CV",
+    metric == "POR_min" ~ "Min",
+    metric == "POR_max" ~ "Max",
+    metric == "LCV" ~ "LCV",
+    metric == "Lskew" ~ "L-Skew",
+    metric == "Lkurtosis" ~ "L-Kurtosis",
+    metric == "lag1_autocorrelation" ~ "Lag-1 Autocorrelation",
+    metric == "seasonal_amplitude" ~ "Seasonal Amplitude",
+    metric == "seasonal_phase" ~ "Seasonal Phase"
+  )) %>%
+  dplyr::mutate(metric = factor(metric, levels = c("1st", "5th", "10th", "25th", "50th", "75th",
+                                                     "90th", "95th", "99th", "Mean", "SD", "CV",
+                                                     "Min", "Max", "LCV", "L-Skew", "L-Kurtosis",
+                                                     "Lag-1 Autocorrelation", "Seasonal Amplitude",
+                                                     "Seasonal Phase")))
+
+
+
+## Plot
+categories <- unique(por$category)
+for (i in 1:length(categories)){
+  cat("#### ", categories[i], "\n");
+  
+  print(
+      ggplot2::ggplot(data = dplyr::filter(por, category == categories[i]),
+                  aes(x = observed, y = modeled)) +
+    ggplot2::geom_point() +
+    ggplot2::theme_bw() +
+    ggplot2::facet_wrap(facets = ggplot2::vars(metric),
+                        scales = 'free') +
+    ggplot2::geom_abline(slope = 1) + 
+    ggplot2::labs(x = 'Observed',
+                  y = 'Modeled',
+                  title = categories[i]) +
+    ggplot2::theme(panel.spacing = ggplot2::unit(1, 'lines'),
+                   strip.background = ggplot2::element_blank(),
+                   strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                   plot.title = element_text(hjust = 0.5),
+                   plot.subtitle = element_text(hjust = 0.5),
+                   plot.caption = ggplot2::element_text(hjust = 0.5))
+  )
+
+  
+  cat('\n\n')
+}
+```
+
+
+------
+
+## Goodness-of-fit plots {.tabset}
+
+### Percent Bias
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+
+# Note that something weird is going on with the percent annual category so I've removed it. 
+# gof <- filter(gof, category != 'Percent Annual')
+
+gof_bias_bin <- gof %>%
+  dplyr::filter(metric == 'Percent Bias') %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  # bin (auto-ungroups with summarise)
+  dplyr::summarise(
+    `<-75` = sum(value < -75, na.rm = T)/dplyr::n() * -100,
+    `[-75,-50)` = sum(value < -50 & value >= -75, na.rm = T)/dplyr::n() * -100,
+    `[-50,-25)` = sum(value < -25 & value >= -50, na.rm = T)/dplyr::n() * -100,
+    `[-25,0)` = sum(value < 0 & value >= -25, na.rm = T)/dplyr::n() * -100,
+    `[0,25]` = sum(value >= 0 & value <= 25, na.rm = T)/dplyr::n() * 100,
+    `(25,50]` = sum(value > 25 & value <= 50, na.rm = T)/dplyr::n() * 100,
+    `(50,75]` = sum(value > 50 & value <= 75, na.rm = T)/dplyr::n() * 100,
+    `> 75` = sum(value > 75, na.rm = T)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(`NA` = 100 - rowSums(abs(dplyr::select(., `<-75`:`> 75`))) ) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `<-75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('> 75', '(50,75]', '(25,50]', '[0,25]',
+                                             '<-75', '[-75,-50)', '[-50,-25)', '[-25,0)',
+                                             'NA')))
+
+
+
+### calculate max total percentage for each annual stat in each direction
+### i.e., total positive values for annual_sd, total negative values for annual_sd
+gof_lim <- gof_bias_bin %>%
+  dplyr::group_by(category, annual_stat) %>%
+  dplyr::summarise(pos = sum(value[value >= 0]),
+                   neg = sum(value[value < 0])) %>%
+  dplyr::ungroup() %>%
+  dplyr::summarise(pos = max(pos),
+                   neg = min(neg)) %>%
+  unlist() %>%
+  abs() %>%
+  max()
+
+
+# barplot
+ggplot2::ggplot(gof_bias_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::ylim(c(-gof_lim, gof_lim)) +
+  ggplot2::scale_fill_manual(values = c("#01665E", "#5AB4AC", "#C7EAE5",
+                                        "#F5F5F5",
+                                        "#8C510A", "#D8B365", "#F6E8C3", "#F5F5F5", 'grey')) +
+  ggplot2::theme_bw() +
+  ggplot2::geom_hline(yintercept = 0, color = 'red', size = 1) +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      # nrow = 4,
+                      ncol = 2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(limits=c(-gof_lim, gof_lim),
+                              breaks = seq(-50,50,20),
+                              labels = as.character(abs(seq(-50,50,20))),
+                              expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = -50, yend = 50,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "Percent Bias",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "Percent Bias: Average percent bias at each basin computed as the sum of the difference between modeled and observed values for each year (the sum of residuals), divided by the sum of the observed values and converted to percent.",
+                  width = 100)
+                )
+```
+
+
+### Spearman's Rho
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+gof_spr_bin <- gof %>%
+  dplyr::filter(metric == "Spearman's Rho") %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  # bin (auto-ungroups with summarise)
+  dplyr::summarise(
+    `> 0.75` = sum(value > 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.50,0.75]` = sum(value > 0.50 & value <= 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.25,0.50]` = sum(value > 0.25 & value <= 0.50, na.rm = T)/dplyr::n() * 100,
+    `<= 0.25` = sum(value <= 0.25, na.rm = T)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  # Add column with percent NA
+  dplyr::mutate(`NA` = 100 - (`> 0.75` + `(0.50,0.75]` + `(0.25,0.50]` + `<= 0.25`)) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `> 0.75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('NA', '> 0.75', '(0.50,0.75]',
+                                             '(0.25,0.50]', '<= 0.25')))
+
+# barplot
+ggplot2::ggplot(gof_spr_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::scale_fill_manual(values = c('grey', '#d9f0a3','#78c679','#238443','#004529'),
+                             guide = ggplot2::guide_legend(reverse = T)) +
+  ggplot2::theme_bw() +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      ncol=2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(breaks = seq(0,100,20), expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = 0, yend = 100,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "Spearman's Rho",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "Spearman's rank correlation coefficient is a non-parametric measure of statistical dependence between the ranking of two variables. Lighter colors represent higher Spearman's values or better correlation between the observed and simulated values. Darker colors represent lower Spearman's values or poorer correlation between the observed and simulated values.",
+                  width = 100)
+                )
+
+```
+
+
+### Kendall's Tau
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+gof_kt_bin <- gof %>%
+  dplyr::filter(metric == "Kendall's Tau") %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  # bin (auto-ungroups with summarise)
+  dplyr::summarise(
+    `> 0.75` = sum(value > 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.50,0.75]` = sum(value > 0.50 & value <= 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.25,0.50]` = sum(value > 0.25 & value <= 0.50, na.rm = T)/dplyr::n() * 100,
+    `<= 0.25` = sum(value <= 0.25, na.rm = T)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  # Add column with percent NA
+  dplyr::mutate(`NA` = 100 - (`> 0.75` + `(0.50,0.75]` + `(0.25,0.50]` + `<= 0.25`)) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `> 0.75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('NA', '> 0.75', '(0.50,0.75]',
+                                             '(0.25,0.50]', '<= 0.25')))
+
+# barplot
+ggplot2::ggplot(gof_kt_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::scale_fill_manual(values = c('grey', '#d9f0a3','#78c679','#238443','#004529'),
+                             guide = ggplot2::guide_legend(reverse = T)) +
+  ggplot2::theme_bw() +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      ncol=2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(breaks = seq(0,100,20), expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = 0, yend = 100,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "Kendall's Tau",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "Kendall's Tau or the Kendall rank correlation coefficient measures the ordinal association between measured quantities. It is a measure of correlation ranging from -1 to 1 with -1 being perfect disagreement between pairs and 1 being perfect agreement. Here lighter values represent more correlation between modeled and observe3d values and darker colors mean less correlation.",
+                  width = 100)
+                )
+```
+
+
+### Pearson's R
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+gof_pr_bin <- gof %>%
+  dplyr::filter(metric == "Pearson's R") %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  # bin (auto-ungroups with summarise)
+  dplyr::summarise(
+    `> 0.75` = sum(value > 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.50,0.75]` = sum(value > 0.50 & value <= 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.25,0.50]` = sum(value > 0.25 & value <= 0.50, na.rm = T)/dplyr::n() * 100,
+    `<= 0.25` = sum(value <= 0.25, na.rm = T)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  # Add column with percent NA
+  dplyr::mutate(`NA` = 100 - (`> 0.75` + `(0.50,0.75]` + `(0.25,0.50]` + `<= 0.25`)) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `> 0.75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('NA', '> 0.75', '(0.50,0.75]',
+                                             '(0.25,0.50]', '<= 0.25')))
+
+# barplot
+ggplot2::ggplot(gof_pr_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::scale_fill_manual(values = c('grey', '#d9f0a3','#78c679','#238443','#004529'),
+                             guide = ggplot2::guide_legend(reverse = T)) +
+  ggplot2::theme_bw() +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      ncol=2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(breaks = seq(0,100,20), expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = 0, yend = 100,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "Pearson's R",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "Pearson's R or Pearson's correleation coefficient is a measure of the linear association between two variables. It ranges from -1 to 1 with higher values being more correlation between variables. Here light green is more correlation while dark green is less.",
+                  width = 100)
+                )
+```
+
+
+### VE
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+gof_ve_bin <- gof %>%
+  dplyr::filter(metric == 'VE') %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  # bin (auto-ungroups with summarise)
+    dplyr::summarise(
+    `> 0.75` = sum(value > 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.50,0.75]` = sum(value > 0.50 & value <= 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.25,0.50]` = sum(value > 0.25 & value <= 0.50, na.rm = T)/dplyr::n() * 100,
+    `<= 0.25` = sum(value <= 0.25, na.rm = T)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  # Add column with percent NA
+  dplyr::mutate(`NA` = 100 - (`> 0.75` + `(0.50,0.75]` + `(0.25,0.50]` + `<= 0.25`)) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `> 0.75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('NA', '> 0.75', '(0.50,0.75]',
+                                             '(0.25,0.50]', '<= 0.25')))
+
+
+# barplot
+ggplot2::ggplot(gof_ve_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::scale_fill_manual(values = c('grey', '#d9f0a3','#78c679','#238443','#004529'),
+                             guide = ggplot2::guide_legend(reverse = T)) +
+  ggplot2::theme_bw() +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      ncol = 2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(breaks = seq(0,100,20), expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = 0, yend = 100,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "Volumetric Efficiency",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "Volumetric Efficiency (VE): An overall goodness of fit metric that is similar to the more commonly used Nash-Sutcliffe model efficiency (NSE). VE was used here as it balances the effect of small and large values evenly whereas NSE puts more weight on larger values. A value of 1 is a perfect match between the observed and simulated values. Lighter colors are closer to one and reprsent a better fit between simulated and observed values.",
+                  width = 100)
+                )
+```
+
+
+### NRMSE
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+gof_nrmse_bin <- gof %>%
+  dplyr::filter(metric == 'NRMSE') %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  dplyr::summarise(
+    `> 0.75` = sum(value > 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.50,0.75]` = sum(value > 0.50 & value <= 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.25,0.50]` = sum(value > 0.25 & value <= 0.50, na.rm = T)/dplyr::n() * 100,
+    `<= 0.25` = sum(value <= 0.25, na.rm = T)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  # Add column with percent NA
+  dplyr::mutate(`NA` = 100 - (`> 0.75` + `(0.50,0.75]` + `(0.25,0.50]` + `<= 0.25`)) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `> 0.75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('NA', '> 0.75', '(0.50,0.75]',
+                                             '(0.25,0.50]', '<= 0.25')))
+  
+
+# barplot
+ggplot2::ggplot(gof_nrmse_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::scale_fill_manual(values = rev(c('#d9f0a3','#78c679','#238443','#004529', 'grey')),
+                              guide = ggplot2::guide_legend(reverse = T)) +
+  ggplot2::theme_bw() +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      ncol=2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(breaks = seq(0,100,20), expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = 0, yend = 100,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "NRMSE",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "Normalized Root Mean Square Error. Lighter colors are closer to zero reflecting less difference between simulated and observed values. Darker colors represent higher NRMSE values with more difference between simulated and observed values.",
+                  width = 100)
+                )
+
+```
+
+
+### NSE
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+gof_nse_bin <- gof %>%
+  dplyr::filter(metric == 'NSE') %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  dplyr::summarise(
+    `> 0.75` = sum(value > 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.50,0.75]` = sum(value > 0.50 & value <= 0.75, na.rm = T)/dplyr::n() * 100,
+    `(0.25,0.50]` = sum(value > 0.25 & value <= 0.50, na.rm = T)/dplyr::n() * 100,
+    `<= 0.25` = sum(value <= 0.25, na.rm = T)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  # Add column with percent NA
+  dplyr::mutate(`NA` = 100 - (`> 0.75` + `(0.50,0.75]` + `(0.25,0.50]` + `<= 0.25`)) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `> 0.75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('NA', '> 0.75', '(0.50,0.75]',
+                                             '(0.25,0.50]', '<= 0.25')))
+  
+
+# barplot
+ggplot2::ggplot(gof_nse_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::scale_fill_manual(values = rev(c('#d9f0a3','#78c679','#238443','#004529', 'grey')),
+                              guide = ggplot2::guide_legend(reverse = T)) +
+  ggplot2::theme_bw() +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      ncol=2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(breaks = seq(0,100,20), expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = 0, yend = 100,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "NSE",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "NSE or Nash-Sutcliffe efficiency is a commonly used overall goodness of fit metric. A value of 1 means that the model perfectly represents the observations while a value of 0 means that the model has the same skill as the mean of the observations. Here darker colors respresent a better model.",
+                  width = 100)
+                )
+
+```
+
+
+### MAE
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+gof_mae_bin <- gof %>%
+  dplyr::filter(metric == 'MAE') %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  dplyr::summarise(
+    `> 75` = sum(value > 75, na.rm = T)/dplyr::n() * 100,
+    `(50,75]` = sum(value > 50 & value <= 75, na.rm = T)/dplyr::n() * 100,
+    `(25,50]` = sum(value > 25 & value <= 50, na.rm = T)/dplyr::n() * 100,
+    `<= 25` = sum(value <= 25, na.rm = T)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  # Add column with percent NA
+  dplyr::mutate(`NA` = 100 - (`> 75` + `(50,75]` + `(25,50]` + `<= 25`)) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `> 75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('NA', '> 75', '(50,75]',
+                                             '(25,50]', '<= 25')))
+  
+
+# barplot
+ggplot2::ggplot(gof_mae_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::scale_fill_manual(values = rev(c('#d9f0a3','#78c679','#238443','#004529', 'grey')),
+                              guide = ggplot2::guide_legend(reverse = T)) +
+  ggplot2::theme_bw() +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      ncol=2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(breaks = seq(0,100,20), expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = 0, yend = 100,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "MAE",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "MAE - Mean Absolute Error, the average absolute error between model and observation pairs. Lighter values reperesent a closer match between modeled and observed values.",
+                  width = 100)
+                )
+
+```
+
+
+### ME
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+gof_me_bin <- gof %>%
+  dplyr::filter(metric == 'ME') %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  # bin (auto-ungroups with summarise)
+  dplyr::summarise(
+    `<-75` = sum(value < -75)/dplyr::n() * -100,
+    `[-75,-50)` = sum(value < -50 & value >= -75)/dplyr::n() * -100,
+    `[-50,-25)` = sum(value < -25 & value >= -50)/dplyr::n() * -100,
+    `[-25,0)` = sum(value < 0 & value >= -25)/dplyr::n() * -100,
+    `[0,25]` = sum(value >= 0 & value <= 25)/dplyr::n() * 100,
+    `(25,50]` = sum(value > 25 & value <= 50)/dplyr::n() * 100,
+    `(50,75]` = sum(value > 50 & value <= 75)/dplyr::n() * 100,
+    `> 75` = sum(value > 75)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(`NA` = 100 - rowSums(abs(dplyr::select(., `<-75`:`> 75`))) ) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `<-75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('> 75', '(50,75]', '(25,50]', '[0,25]',
+                                             '<-75', '[-75,-50)', '[-50,-25)', '[-25,0)',
+                                             'NA')))
+
+
+
+### calculate max total percentage for each annual stat in each direction
+### i.e., total positive values for annual_sd, total negative values for annual_sd
+gof_lim <- gof_me_bin %>%
+  dplyr::group_by(category, annual_stat) %>%
+  dplyr::summarise(pos = sum(value[value >= 0]),
+                   neg = sum(value[value < 0])) %>%
+  dplyr::ungroup() %>%
+  dplyr::summarise(pos = max(pos),
+                   neg = min(neg)) %>%
+  unlist() %>%
+  abs() %>%
+  max()
+
+
+# barplot
+ggplot2::ggplot(gof_me_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::ylim(c(-gof_lim, gof_lim)) +
+  ggplot2::scale_fill_manual(values = c("#01665E", "#5AB4AC", "#C7EAE5",
+                                        "#F5F5F5",
+                                        "#8C510A", "#D8B365", "#F6E8C3", "#F5F5F5", 'grey')) +
+  ggplot2::theme_bw() +
+  ggplot2::geom_hline(yintercept = 0, color = 'red', size = 1) +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      # nrow = 4,
+                      ncol = 2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(limits=c(-gof_lim, gof_lim),
+                              breaks = seq(-50,50,20),
+                              labels = as.character(abs(seq(-50,50,20))),
+                              expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = -50, yend = 50,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "ME",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "ME - Mean Error, or the average of all errors. White values show the closest modeled to observed fit while blue values are positive error while brown values are negative error.",
+                  width = 100)
+                )
+```
+
+
+### RMSE
+```{r echo = F, warning = F, message = F, fig.align="center", fig.width=7, fig.height=9}
+# bin percent biases
+gof_rmse_bin <- gof %>%
+  dplyr::filter(metric == 'RMSE') %>%
+  # group
+  dplyr::group_by(category, annual_stat) %>%
+  dplyr::summarise(
+    `> 75` = sum(value > 75, na.rm = T)/dplyr::n() * 100,
+    `(50,75]` = sum(value > 50 & value <= 75, na.rm = T)/dplyr::n() * 100,
+    `(25,50]` = sum(value > 25 & value <= 50, na.rm = T)/dplyr::n() * 100,
+    `<= 25` = sum(value <= 25, na.rm = T)/dplyr::n() * 100,
+    category = dplyr::first(category)
+  ) %>%
+  dplyr::ungroup() %>%
+  # Add column with percent NA
+  dplyr::mutate(`NA` = 100 - (`> 75` + `(50,75]` + `(25,50]` + `<= 25`)) %>%
+  # convert to long
+  tidyr::pivot_longer(cols = `> 75`:`NA`) %>%
+  # rename
+  dplyr::rename(bin = name) %>%
+  # convert to factor
+  dplyr::mutate(bin = factor(bin, levels = c('NA', '> 75', '(50,75]',
+                                             '(25,50]', '<= 25')))
+  
+
+# barplot
+ggplot2::ggplot(gof_rmse_bin, aes(x = annual_stat, y = value, fill = bin)) +
+  ggplot2::geom_bar(stat ='identity', color = 'black') +
+  ggplot2::scale_fill_manual(values = rev(c('#d9f0a3','#78c679','#238443','#004529', 'grey')),
+                              guide = ggplot2::guide_legend(reverse = T)) +
+  ggplot2::theme_bw() +
+  ggplot2::facet_wrap(facets = ggplot2::vars(category),
+                      ncol=2,
+                      scales = 'free') +
+  ggplot2::scale_y_continuous(breaks = seq(0,100,20), expand = c(0,0)) +
+  ggplot2::coord_flip() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                 panel.border = ggplot2::element_blank(),
+                 axis.ticks.y = ggplot2::element_blank(),
+                 axis.title.y = ggplot2::element_blank(),
+                 panel.spacing = ggplot2::unit(1, 'lines'),
+                 strip.background = ggplot2::element_blank(),
+                 strip.text = ggplot2::element_text(face = 'bold', size = 14),
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 plot.caption = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::annotate(x = 0, xend = 0,
+                    y = 0, yend = 100,
+                    color = 'black', geom = 'segment') +
+  ggplot2::ylab("Percent of basins in selected categories") +
+  ggplot2::labs(title = "RMSE",
+                subtitle = 'Percent of basins in selected categories',
+                caption = stringr::str_wrap(
+                  string = "RMSE - Root Mean Square Error is the root of the mean squred errors between the observed and modeled data. Lighter values represent a better fit, while darker values are a poorer fit.",
+                  width = 100)
+                )
+
+```
+
+
+### Definitions
+
+* **Mean:** Mean daily streamflow, by month.
+* **Min:** Minimum daily streamflow, by month.
+* **Max:** Maximum daily streamflow, by month.
+* **SD:** Standard deviation of daily streamflow, by month.
+* **Percent Annual:** Percent of total annual streamflow constituted by each month.
+* **Percentile:** Annual flow percentiles (e.g. Annual 1 = 1st percentile of daily streamflow).
+* **Low Q:** Annual multi-day low flows (e.g. Low Q3 = annual 3-day low flow).
+* **High Q:** Annual multi-day high flows (e.g. High Q30 = annual 30-day high flow).
+* **Sum:** Total annual streamflow.
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+
+
+
+
+
+## Goodness-of-fit maps {.tabset .tabset-pills}
+
+```{r echo = F}
+# suppress GOF maps
+suppress_maps <- F
+### Functions and settings for maps
+# Function to structure data as input to map function
+structure_map_data <- function(.metric,
+                               .gof = gof,
+                               .site_coord = site_coord){
+  # Observational (for shapes)
+  gof_bias_map <- .gof %>%
+    # filter to metric
+    dplyr::filter(metric == .metric) %>%
+    # add coordinates
+    dplyr::rename(site = site_no) %>%
+    dplyr::left_join(., .site_coord[, c("site", "lat", "lon")], by = "site") %>%
+    dplyr::rename(site_no = site) %>%
+    # shape column filled with size (16)
+    dplyr::mutate(shape = 21)
+
+  # Set bins
+  if (.metric %in% 'Percent Bias'){
+    
+    gof_bias_map <- gof_bias_map %>%
+      dplyr::mutate(bin = cut( x = value, breaks = c(-Inf, -75,-50,-25,25,50,75,Inf) ))
+    
+  }else if (.metric %in% c("Spearman's Rho", "Kendall's Tau", "Pearson's R",
+                           "VE", "NRMSE", "NSE")){
+    
+    gof_bias_map <- gof_bias_map %>%
+      dplyr::mutate(bin = cut(x = value, breaks = c(-Inf, 0.25, 0.50, 0.75, Inf)))
+    
+  }else if (.metric %in% c('MAE', 'RMSE')){
+    
+    gof_bias_map <- gof_bias_map %>%
+      dplyr::mutate(bin = cut(x = value, breaks = c(-Inf, 25, 50, 75, Inf)))
+    
+  }else if (.metric %in% c("ME")){
+    
+    gof_bias_map <- gof_bias_map %>%
+      dplyr::mutate(bin = cut( x = value, breaks = c(-Inf, -75,-50,-25,25,50,75,Inf) ))
+    
+  }else{
+    stop(paste0(".metric argument '", .metric, "' not supported for GOF maps."))
+  }
+
+  return(gof_bias_map)
+}
+
+# Point colors
+get_colors <- function(.map_data){
+  dplyr::case_when(
+    .map_data$metric[1] %in% c('Percent Bias', 'ME') ~ 'BrBG',
+    .map_data$metric[1] %in% c("Spearman's Rho", "Kendall's Tau", "Pearson's R",
+                               "VE", "NRMSE", "NSE", "MAE", "RMSE") ~ 'YlGn'
+  ) %>%
+    RColorBrewer::brewer.pal(n = length( levels(.map_data$bin) ),
+                             name = .)
+}
+
+# Stats order
+categories <- levels(gof$category)
+caption_label <- c('mean', 'minima', 'maxima', 'standard deviation', 'percent annual', 'percentile', 'low flows', 'high flows', 'sum')
+# caption_label <- c('mean', 'minima', 'maxima', 'standard deviation', 'percentile', 'low flows', 'high flows', 'sum')
+```
+
+
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+
+##################################################
+## Project:  
+## Script purpose:  Import functions
+## Date:  2020-09-21
+## Author:  Samuel Saxe
+##################################################
+
+plot_US_map2 <- function(data, maptitle, colors_list = NULL, caption = NULL,
+                         caption_line_width = 100, map_padding = 0.25){  
+  # The NHM and NWM are currently only operational in the CONUS. Code is included for non-CONUS
+  # points, but is commented out and points will not be mapped.
+  ### Subset AK and HI points
+  data_conus <- dplyr::filter(data, lon > -125)
+  data_ak <- dplyr::filter(data, lat > 50 & lon < -125)
+  data_hi <- dplyr::filter(data, lat < 50 & lon < -150)
+  do_ak <- nrow(data_ak) > 0
+  do_hi <- nrow(data_hi) > 0
+  
+  if (do_ak || do_hi) warning("Ex-CONUS sites are not mapped.", call. = F, immediate. = T)
+  
+  ### Get shapefiles
+  # CONUS
+  sf_conus <- ggplot2::map_data("state")
+  # # AK/HI
+  # if (do_ak || do_hi) sf_usa <- rnaturalearth::ne_countries(scale = 'medium',
+  #                                                           type = 'countries',
+  #                                                           country = 'United States of America',
+  #                                                           returnclass = 'sf')
+  # 
+  # if (do_ak) map_ak <- ggplot() + 
+  #   ggplot2::geom_sf(data = sf_usa, fill = "white") +
+  #   ggplot2::coord_sf(crs = sf::st_crs(4326), xlim = c(-179, -129), ylim = c(51.25, 71.75), expand = FALSE, datum  = NA)
+  # 
+  # if (do_hi) map_hi <- ggplot() + 
+  #   ggplot2::geom_sf(data = sf_usa, fill = "white") +
+  #   ggplot2::coord_sf(crs = sf::st_crs(4326), xlim = c(-160.5, -154.5), ylim = c(18.75, 22.5), expand = FALSE, datum  = NA)
+  # 
+  
+  ### CONUS map
+  # Dimensions (xlim = c(-125, -67), ylim = c(20, 50))
+  min_lat <- min(data_conus$lat) - map_padding
+  max_lat <- max(data_conus$lat) + map_padding
+  min_lon <- min(data_conus$lon) - map_padding
+  max_lon <- max(data_conus$lon) + map_padding
+  
+  # Map CONUS sites
+  map_conus <- ggplot2::ggplot() +
+    ggplot2::geom_polygon(data = sf_conus,
+                          aes(x = long, y = lat, group = group),
+                          color = "black", fill = "grey80",
+                          show.legend = F) +
+    ggplot2::coord_quickmap(xlim = c(min_lon, max_lon), ylim = c(min_lat, max_lat)) +
+      # ggplot2::coord_sf(crs = sf::st_crs(4326), xlim = c(min_lon, max_lon), ylim = c(min_lat, max_lat)) +
+    ggplot2::geom_point(data = data_conus,
+                        aes(x = lon, y = lat, color = bin),
+                        shape = 16,
+                        alpha = 1, show.legend = T) +
+    ggplot2::facet_wrap(~annual_stat) +
+    ggplot2::labs(x = "Longitude",
+                  y = "Latitude") + 
+    ggplot2::ggtitle(maptitle)
+  
+  # Set manual colors if provided
+  if (!is.null(colors_list)){
+    map_conus <- map_conus +
+      ggplot2::scale_color_manual(values = colors_list)
+  }
+  # Set caption if provided
+  if (!is.null(caption)){
+    map_conus <- map_conus +
+      ggplot2::labs(caption = stringr::str_wrap( string = caption,
+                                                 width = caption_line_width ))
+  }
+    
+
+  
+  # if there are points in AK map it. 
+  if (do_ak){
+    # # setup ak map
+    # alaska <- map_ak +
+    #   ggplot2::geom_point(alpha = 1.0,
+    #                       data  = data_ak,
+    #                       aes(x = lon, y = lat, color = bin),
+    #                       shape = data_ak$shape) +
+    #   ggplot2::theme(legend.position = "none",
+    #                  axis.title.x = ggplot2::element_blank(),
+    #                  axis.text.x  = ggplot2::element_blank(),
+    #                  axis.ticks.x = ggplot2::element_blank(),
+    #                  axis.title.y = ggplot2::element_blank(),
+    #                  axis.text.y  = ggplot2::element_blank(),
+    #                  axis.ticks.y = ggplot2::element_blank()
+    #   )
+    # 
+    # # Map AK
+    # map_conus <- map_conus +
+    #   ggplot2::annotation_custom(
+    #     grob = ggplot2::ggplotGrob(alaska),
+    #     xmin = -125,
+    #     xmax = -110,
+    #     ymin = 20,
+    #     ymax = 30.5
+    #   )
+  }
+  
+  # if there are points in HI map it.
+  if (do_hi){
+    # # Setup HI Map
+    # hawaii  <- map_hi +
+    #   ggplot2::geom_point(alpha = 1.0,
+    #                       data  = data_hi,
+    #                       ggplot2::aes(x = lon,
+    #                                    y = lat,
+    #                                    color = bin),
+    #                       shape = shape) +
+    #   ggplot2::theme(legend.position = "none",
+    #                  axis.title.x = ggplot2::element_blank(),
+    #                  axis.text.x  = ggplot2::element_blank(),
+    #                  axis.ticks.x = ggplot2::element_blank(),
+    #                  axis.title.y = ggplot2::element_blank(),
+    #                  axis.text.y  = ggplot2::element_blank(),
+    #                  axis.ticks.y = ggplot2::element_blank())
+    # 
+    # # Map HI
+    # map_conus <- map_conus +
+    #   ggplot2::annotation_custom(
+    #     grob = ggplot2::ggplotGrob(hawaii),
+    #     xmin = -110,
+    #     xmax = -100,
+    #     ymin = 20,
+    #     ymax = 26.5
+    #   ) 
+  }
+  
+  # Set themes/guides and return
+  map_conus +
+    ggplot2::theme_bw() +
+    # panel themes
+    ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
+                   panel.grid.minor = ggplot2::element_blank(),
+                   panel.border = ggplot2::element_rect(fill = NA),
+                   panel.background = ggplot2::element_rect(fill = 'white')) +
+    # facet strip themes
+    ggplot2::theme(strip.background = ggplot2::element_rect(fill = NA, color = NA),
+                   strip.text = ggplot2::element_text(face = "bold", size = 14)) +
+    # main plot text themes (not legend)
+    ggplot2::theme(axis.title = ggplot2::element_blank(),
+                   axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1),
+                   plot.caption = ggplot2::element_text(hjust = 0.5, size = 10),
+                   plot.title = ggplot2::element_text(hjust = 0.5, size = 15)) +
+    # legend themes
+    ggplot2::theme(legend.text = ggplot2::element_text(size = 14),
+                   legend.title = ggplot2::element_blank(),
+                   legend.key = ggplot2::element_rect("grey90")) +
+    ggplot2::guides(fill = ggplot2::guide_legend(override.aes = list(size = 6))) +
+    # borders
+    ggplot2::geom_point(data = data_conus,
+                        aes(x = lon, y = lat),
+                        fill = NA, color = 'black',
+                        shape = 21,
+                        alpha = 1, show.legend = F)
+
+  # This is sweet, but does not work in for loops. <- That's because instead of returning the figure you
+  # were telling R to print it directly to console.  You just have to return the final plot grob with 
+  # return()
+  # print(plotly::ggplotly(new_map))
+}
+
+```
+
+### Percent Bias {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+# data
+gof_map <- structure_map_data("Percent Bias")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste('Percent Bias:', categories[i]),
+                 colors_list = gof_color,
+                 caption = paste(
+                   "Average percent bias at each basin was computed as the sum of the difference between   modeled and observed", caption_label[i], "values for each year (the sum of residuals), divided by the sum of the observed values and converted to percent."))
+  )
+  cat('\n\n')
+}
+```
+
+
+### Spearman's rho {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+# data
+gof_map <- structure_map_data("Spearman's Rho")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste("Spearman's rho:", categories[i]),
+                 colors_list = gof_color,
+                 caption = paste("Spearman's rank correlation coefficient is a non-parametric measure of statistical dependence between the ranking of two variables. Lighter colors represent higher Spearman's values, i.e. better correlation between the observed and simulated", caption_label[i], "values. Darker colors represent lower Spearman's values, i.e. poorer correlation between the observed and simulated", caption_label[i], "values."))
+  )
+  cat('\n\n')
+}
+```
+
+
+### Kendall's Tau {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+# data
+gof_map <- structure_map_data("Kendall's Tau")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste("Kendall's Tau:", categories[i]),
+                 colors_list = gof_color,
+                 caption = "Kendall's Tau:")
+  )
+  cat('\n\n')
+}
+```
+
+
+### Pearson's R {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+# data
+gof_map <- structure_map_data("Pearson's R")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste("Pearson's R:", categories[i]),
+                 colors_list = gof_color,
+                 caption = "Pearson's R:")
+  )
+  cat('\n\n')
+}
+```
+
+
+### VE {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+# data
+gof_map <- structure_map_data("VE")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste('Volumetric Efficiency:', categories[i]),
+                 colors_list = gof_color,
+                 caption = paste("Volumetric Efficiency (VE): An overall goodness of fit metric that is similar to the more commonly used Nash-Sutcliffe model efficiency (NSE). VE was used here to balances the effect of small and large values evenly whereas NSE puts more weight on larger values. A value of 1 is a perfect match between the observed and simulated", caption_label[i], "values. Lighter colors are closer to one and reprsent a better fit between simulated and observed", caption_label[i], "values."))
+  )
+  cat('\n\n')
+}
+```
+
+
+
+### NRMSE {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+# data
+gof_map <- structure_map_data("NRMSE")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste("NRMSE:", categories[i]),
+                 colors_list = gof_color,
+                 caption = paste("Normalized Root Mean Square Error (NRMSE). Lighter colors are closer to zero reflecting less difference between simulated and observed", caption_label[i], "values. Darker colors represent higher NRMSE values with more difference between simulated and observed", caption_label[i], "values."))
+  )
+  cat('\n\n')
+}
+```
+
+
+### NSE {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+# data
+gof_map <- structure_map_data("NSE")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste("NSE:", categories[i]),
+                 colors_list = gof_color,
+                 caption = "NSE:")
+  )
+  cat('\n\n')
+}
+```
+
+
+### MAE {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+# data
+gof_map <- structure_map_data("MAE")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste("MAE:", categories[i]),
+                 colors_list = gof_color,
+                 caption = "MAE:")
+  )
+  cat('\n\n')
+}
+```
+
+
+### ME {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+# data
+gof_map <- structure_map_data("ME")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste("ME:", categories[i]),
+                 colors_list = gof_color,
+                 caption = "ME:")
+  )
+  cat('\n\n')
+}
+```
+
+
+### RMSE {.tabset}
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+# data
+gof_map <- structure_map_data("RMSE")
+gof_color <- get_colors(gof_map)
+# iterate over stat categories
+for (i in 1:length(categories)){
+  if (suppress_maps) next
+  # Create tab
+  cat("#### ", categories[i], "\n");
+  # Generate figure
+  print(
+    plot_US_map2(data = dplyr::filter( gof_map, category == categories[i] ),
+                 maptitle = paste("RMSE:", categories[i]),
+                 colors_list = gof_color,
+                 caption = "RMSE:")
+  )
+  cat('\n\n')
+}
+```
+
+
+### Definitions
+
+* **Mean:** Mean daily streamflow, by month.
+* **Min:** Minimum daily streamflow, by month.
+* **Max:** Maximum daily streamflow, by month.
+* **SD:** Standard deviation of daily streamflow, by month.
+* **Percent Annual:** Percent of total annual streamflow constituted by each month.
+* **Percentile:** Annual flow percentiles (e.g. Annual 1 = 1st percentile of daily streamflow).
+* **Low Q:** Annual multi-day low flows (e.g. Low Q3 = annual 3-day low flow).
+* **High Q:** Annual multi-day high flows (e.g. High Q30 = annual 30-day high flow).
+* **Sum:** Total annual streamflow.
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+
+
+------
+
+
+## Trend difference maps  {.tabset}
+
+Trend tests were completed using Sen’s slope [40] for magnitude, except in cases when the annual
+series had “zero-flow” status for any observed or modeled time series for a given basin; in those cases,
+the time series was converted to a binomial series, and a logistic regression [41] was done with year as the explanatory variable. The predicted probabilities from the model (dependent variable) were
+used to quantify the change in probability of a zero-flow year over time. Sen’s slope was computed
+using the R function “GeneralMannKendall.R”; the function is authored by Benjamin Renard of Irstea,
+UR Riverly, Lyon, France and is available for download from Dudley et al. [42]. Logistic regression was
+completed using the “glm” function in the R “stats” package with family = binomial (link = “logit”).
+Correlations between basin characteristics for study basins and project results were computed with
+Kendall’s tau. (Hodgkins et al 2020)
+
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+
+plot_US_trends <- function(data, maptitle, caption = NULL, caption_line_width = 100, map_padding = 0.25){  
+  # The NHM and NWM are currently only operational in the CONUS. Code is included for non-CONUS
+  # points, but is commented out and points will not be mapped.
+  data <- data %>%
+    dplyr::rename(ptcolor = color) %>%
+    dplyr::rename(`Shapes indicate observed\ntrend direction` = shape) %>%
+    dplyr::rename(`Colors indicate difference between\nmodeled and observed magnitudes` = ptcolor)
+  ### Subset AK and HI points
+  data_conus <- dplyr::filter(data, lon > -125)
+  data_ak <- dplyr::filter(data, lat > 50 & lon < -125)
+  data_hi <- dplyr::filter(data, lat < 50 & lon < -150)
+  do_ak <- nrow(data_ak) > 0
+  do_hi <- nrow(data_hi) > 0
+  
+  if (do_ak || do_hi) warning("Ex-CONUS sites are not mapped.", call. = F, immediate. = T)
+  
+  ### Get shapefiles
+  # CONUS
+  sf_conus <- ggplot2::map_data("state")
+  # # AK/HI
+  # if (do_ak || do_hi) sf_usa <- rnaturalearth::ne_countries(scale = 'medium',
+  #                                                           type = 'countries',
+  #                                                           country = 'United States of America',
+  #                                                           returnclass = 'sf')
+  # 
+  # if (do_ak) map_ak <- ggplot() + 
+  #   ggplot2::geom_sf(data = sf_usa, fill = "white") +
+  #   ggplot2::coord_sf(crs = sf::st_crs(4326), xlim = c(-179, -129), ylim = c(51.25, 71.75), expand = FALSE, datum  = NA)
+  # 
+  # if (do_hi) map_hi <- ggplot() + 
+  #   ggplot2::geom_sf(data = sf_usa, fill = "white") +
+  #   ggplot2::coord_sf(crs = sf::st_crs(4326), xlim = c(-160.5, -154.5), ylim = c(18.75, 22.5), expand = FALSE, datum  = NA)
+  # 
+  
+  ### CONUS map
+  # Dimensions (xlim = c(-125, -67), ylim = c(20, 50))
+  min_lat <- min(data_conus$lat) - map_padding
+  max_lat <- max(data_conus$lat) + map_padding
+  min_lon <- min(data_conus$lon) - map_padding
+  max_lon <- max(data_conus$lon) + map_padding
+  
+  # Just manually set shapes, annoying otherwise
+  data_conus <- data_conus %>%
+    dplyr::mutate(shape = dplyr::case_when(
+      `Shapes indicate observed\ntrend direction` == "Positive trend magnitude > 25%" ~ 24,
+      `Shapes indicate observed\ntrend direction` == "Negative trend magnitude > 25%" ~ 21,
+      TRUE ~ 25
+    ))
+  
+  # Map CONUS sites
+  map_conus <- ggplot2::ggplot() +
+    ggplot2::geom_polygon(data = sf_conus,
+                          aes(x = long, y = lat, group = group),
+                          color = "black", fill = "grey80") +
+    ggplot2::coord_quickmap(xlim = c(min_lon, max_lon), ylim = c(min_lat, max_lat)) +
+    ggplot2::geom_point(data = data_conus,
+                        aes(x = lon, y = lat,
+                            color = `Colors indicate difference between\nmodeled and observed magnitudes`,
+                            fill = `Colors indicate difference between\nmodeled and observed magnitudes`,
+                            shape = `Shapes indicate observed\ntrend direction`),
+                        alpha = 1) +
+    # ggplot2::geom_point(data = data_conus,
+    #                     aes(x = lon, y = lat,
+    #                         color = `Colors indicate difference between\nmodeled and observed magnitudes`,
+    #                         fill = `Colors indicate difference between\nmodeled and observed magnitudes`),
+    #                     shape = data_conus$shape,
+    #                     alpha = 1) +
+    ggplot2::scale_shape_manual(values = c(24,21,25)) +
+    ggplot2::scale_fill_manual(values = c("#8C6E2D", "#C4A96E", "#E8D2A2", "white",
+                                          "#D6DEFF", "#8299FF", "#1741FF")) +
+    ggplot2::scale_color_manual(values = c("#8C6E2D", "#C4A96E", "#E8D2A2", "white",
+                                           "#D6DEFF", "#8299FF", "#1741FF")) +
+    ggplot2::facet_wrap(~annual_stat) +
+    ggplot2::labs(x = "Longitude",
+                  y = "Latitude") + 
+    ggplot2::ggtitle(maptitle)
+  
+  # Set caption if provided
+  if (!is.null(caption)){
+    map_conus <- map_conus +
+      ggplot2::labs(caption = stringr::str_wrap( string = caption,
+                                                 width = caption_line_width ))
+  }
+  
+  
+  
+  # if there are points in AK map it. 
+  if (do_ak){
+    # # setup ak map
+    # alaska <- map_ak +
+    #   ggplot2::geom_point(alpha = 1.0,
+    #                       data  = data_ak,
+    #                       aes(x = lon, y = lat, color = bin),
+    #                       shape = data_ak$shape) +
+    #   ggplot2::theme(legend.position = "none",
+    #                  axis.title.x = ggplot2::element_blank(),
+    #                  axis.text.x  = ggplot2::element_blank(),
+    #                  axis.ticks.x = ggplot2::element_blank(),
+    #                  axis.title.y = ggplot2::element_blank(),
+    #                  axis.text.y  = ggplot2::element_blank(),
+    #                  axis.ticks.y = ggplot2::element_blank()
+    #   )
+    # 
+    # # Map AK
+    # map_conus <- map_conus +
+    #   ggplot2::annotation_custom(
+    #     grob = ggplot2::ggplotGrob(alaska),
+    #     xmin = -125,
+    #     xmax = -110,
+    #     ymin = 20,
+    #     ymax = 30.5
+    #   )
+  }
+  
+  # if there are points in HI map it.
+  if (do_hi){
+    # # Setup HI Map
+    # hawaii  <- map_hi +
+    #   ggplot2::geom_point(alpha = 1.0,
+    #                       data  = data_hi,
+    #                       ggplot2::aes(x = lon,
+    #                                    y = lat,
+    #                                    color = bin),
+    #                       shape = shape) +
+    #   ggplot2::theme(legend.position = "none",
+    #                  axis.title.x = ggplot2::element_blank(),
+    #                  axis.text.x  = ggplot2::element_blank(),
+    #                  axis.ticks.x = ggplot2::element_blank(),
+    #                  axis.title.y = ggplot2::element_blank(),
+    #                  axis.text.y  = ggplot2::element_blank(),
+    #                  axis.ticks.y = ggplot2::element_blank())
+    # 
+    # # Map HI
+    # map_conus <- map_conus +
+    #   ggplot2::annotation_custom(
+    #     grob = ggplot2::ggplotGrob(hawaii),
+    #     xmin = -110,
+    #     xmax = -100,
+    #     ymin = 20,
+    #     ymax = 26.5
+    #   ) 
+  }
+  
+  map_conus +
+    ggplot2::theme_bw() +
+    # panel themes
+    ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
+                   panel.grid.minor = ggplot2::element_blank(),
+                   panel.border = ggplot2::element_rect(fill = NA),
+                   panel.background = ggplot2::element_rect(fill = 'white')) +
+    # facet strip themes
+    ggplot2::theme(strip.background = ggplot2::element_rect(fill = NA, color = NA),
+                   strip.text = ggplot2::element_text(face = "bold", size = 14)) +
+    # main plot text themes (not legend)
+    ggplot2::theme(axis.title = ggplot2::element_blank(),
+                   axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1),
+                   plot.caption = ggplot2::element_text(hjust = 0.5, size = 10),
+                   plot.title = ggplot2::element_text(hjust = 0.5, size = 15)) +
+    # legend themes
+    ggplot2::theme(legend.text = ggplot2::element_text(size = 12),
+                   legend.key = ggplot2::element_rect("grey90"),
+                   legend.position = "bottom") +
+    ggplot2::guides(fill = ggplot2::guide_legend(override.aes = list(size = 6),
+                                                 title.position = "top",
+                                                 title.hjust = 0.5,
+                                                 nrow = 1),
+                    shape = ggplot2::guide_legend(override.aes = list(size = 6),
+                                                  title.position = "top",
+                                                  title.hjust = 0.5,
+                                                  direction = "vertical")) +
+    # borders
+    ggplot2::geom_point(data = data_conus,
+                        aes(x = lon, y = lat,
+                            shape = `Shapes indicate observed\ntrend direction`),
+                        fill = NA, color = 'black',
+                        alpha = 1)
+}
+
+```
+
+
+```{r, results='asis', echo=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width=9, fig.height=9}
+
+#### No need for a function here, not looping over multiple "name" values
+trend_obs <- annual_trend_obs %>%
+    dplyr::select(site_no, annual_stat, category, trend_mag)
+trend_comp_map <- annual_trend_comp %>%
+  # add coordinates
+  dplyr::rename(site = site_no) %>%
+  dplyr::left_join(., site_coord[, c("site", "lat", "lon")], by = "site") %>%
+  dplyr::rename(site_no = site) %>%
+  # add observational
+  dplyr::left_join(x = ., y = trend_obs, by = c("site_no", "annual_stat", "category")) %>%
+  # reorder (trend_mag = obs, val_perc_change_diff = modeled pdiff from obs)
+  dplyr::select(site_no, annual_stat, category, metric, lat, lon, trend_mag, val_perc_change_diff) %>%
+  # shape column
+  dplyr::mutate(shape = dplyr::case_when(
+    trend_mag > 25 ~ "Positive trend magnitude > 25%",
+    trend_mag < -25 ~ "Negative trend magnitude > 25%",
+    TRUE ~ "Absolute trend magnitude <= 25%"
+  )) %>%
+  dplyr::mutate(shape = factor(shape, levels = c("Positive trend magnitude > 25%",
+                                                 "Absolute trend magnitude <= 25%",
+                                                 "Negative trend magnitude > 25%"))) %>%
+  # colors
+  dplyr::mutate(color = cut(x = val_perc_change_diff,
+                            breaks = c(-Inf, -75, -50, -25, 25, 50, 75, Inf)))
+
+
+# Stats order
+categories <- levels(trend_comp_map$category)
+caption_label <- c('mean', 'minima', 'maxima', 'standard deviation', 'percent annual',
+                   'percentile', 'low flows', 'high flows', 'sum')
+
+
+# Create maps: iterate over stat categories
+for (i in 1:length(categories)){
+  cat("### ", categories[i], "\n");
+  print(
+    plot_US_trends(data = dplyr::filter(trend_comp_map, category == categories[i]),
+                   maptitle = paste('Trend in:', categories[i]))
+  )
+  cat('\n\n')
+}
+```
+
+## References
+* Hodgkins G.A., Dudley R.W., Russell A.M., LaFontaine J.H., 2020. Comparing Trends in Modeled and Observed Streamflows at Minimally Altered Basins in the United States. Water 12(6):1728. https://doi.org/10.3390/w12061728
+
+------

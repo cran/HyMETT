@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Colin Penn and Caelen Simeone" />
+
+<meta name="date" content="2021-11-01" />
+
+<title>Basic workflow of HyMETT</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Basic workflow of HyMETT</h1>
+<h4 class="author">Colin Penn and Caelen Simeone</h4>
+<h4 class="date">2021-11-01</h4>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(HyMETT)</span></code></pre></div>
+<div id="hymett" class="section level1">
+<h1>HyMETT</h1>
+<p>HyMETT is Hydrologic Model Evaluation and Time-series Tools. It is a
+package with functions for evaluating hydrologic model output and
+hydrologic time-series data. This vignette walks you through the most
+basic work flows for cases with a single site, a few sites, and many
+sites.</p>
+<div id="installing-hymett" class="section level2">
+<h2>Installing HyMETT</h2>
+<p>The <strong><code>HyMETT</code></strong> package requires R version
+3.6.0 or higher. The package may be installed from the USGS OpenSource
+GitLab hosting platform (<a href="https://code.usgs.gov/">code.usgs.gov</a>) using the
+<code>remotes</code> package. A USGS GitLab Personal Access Token (PAT)
+is required and can be saved in your R profile or environment as
+<code>GITLAB_PAT</code>. <code>HyMETT</code> and package dependencies
+can be installed with the following command:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">requireNamespace</span>(<span class="st">&quot;remotes&quot;</span>)) <span class="fu">install.packages</span>(<span class="st">&quot;remotes&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>remotes<span class="sc">::</span><span class="fu">install_gitlab</span>(<span class="at">repo =</span> <span class="st">&quot;hymett/hymett&quot;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>                        <span class="at">auth_token =</span> <span class="fu">Sys.getenv</span>(<span class="st">&quot;GITLAB_PAT&quot;</span>),</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>                        <span class="at">host =</span> <span class="st">&quot;code.usgs.gov&quot;</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>                        <span class="at">build_vignettes =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+</div>
+<div id="using-hymett-at-a-single-site" class="section level2">
+<h2>Using HyMETT at a single site</h2>
+<div id="running-the-provided-operational-script." class="section level3">
+<h3>Running the provided operational script.</h3>
+<p>An example file for running <code>HyMETT</code> at a single site is
+provided with the installed package, see:
+<code>file.edit(system.file(&quot;extdata&quot;, &quot;Operational_single_site.R&quot;, package = &quot;HyMETT&quot;))</code></p>
+<p>Example data for several sites were included in this package in the
+“extdata” directory (see
+<code>system.file(&quot;extdata&quot;, package = &quot;HyMETT&quot;)</code>. One site is
+USGS site 01013500 in Maine, and the other is USGS site 08202700 in
+Texas which has many zero flow values. Both sites have observed data
+from NWIS stream gages and data from the National Water Model
+retrospective run from 1993 - 2019.</p>
+<p>The modeled and observed inputs must have 2 columns, the first being
+the date of the observation/simulation and the second being the
+streamflow value at each time step. At this time only data at a daily
+time step are allowed.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">date</th>
+<th align="right">streamflow_cfs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1993-01-01</td>
+<td align="right">428</td>
+</tr>
+<tr class="even">
+<td align="left">1993-01-02</td>
+<td align="right">423</td>
+</tr>
+<tr class="odd">
+<td align="left">1993-01-03</td>
+<td align="right">420</td>
+</tr>
+<tr class="even">
+<td align="left">1993-01-04</td>
+<td align="right">415</td>
+</tr>
+<tr class="odd">
+<td align="left">1993-01-05</td>
+<td align="right">410</td>
+</tr>
+<tr class="even">
+<td align="left">1993-01-06</td>
+<td align="right">405</td>
+</tr>
+</tbody>
+</table>
+<p>In order to run this script a number of input variables are
+required.</p>
+<ul>
+<li><p>OBS_dir is the folder that contains the observed input files. As
+a default we used the format <em>site</em>_OBS.csv for all input csv
+files, this formulation can be changed to suit the users needs.</p></li>
+<li><p>MOD_dir is the folder that contains the modeled input files. As a
+default we used the format <em>site</em>_MOD.csv for all input csv
+files, this formulation can be changed to suit the users needs.</p></li>
+<li><p>out_dir is the folder that outputs will be placed in. This folder
+must exist before the script is run. Note that if this folder has
+previous HyMETT outputs placed in it then those outputs for the same
+site will be overwritten.</p></li>
+<li><p>site_no: a string with the id of site number of the target
+site.</p></li>
+</ul>
+<p>Once the input data (modeled and observed) are set up in the target
+directories, the output directory is specified, and the necessary
+variables specified the example operational script should run. This
+script is intended to be an example and we encourage users to modify
+this script to fit their specific needs.</p>
+</div>
+<div id="operations-within-the-operational-script" class="section level3">
+<h3>Operations within the operational script</h3>
+<p>Input/Loading data:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="do">#### Load and pre-format data ####</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="do">##### User inputs #####</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>OBS_dir <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="at">package =</span> <span class="st">&quot;HyMETT&quot;</span>),<span class="st">&quot;/&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>MOD_dir <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="at">package =</span> <span class="st">&quot;HyMETT&quot;</span>),<span class="st">&quot;/&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>out_dir <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="fu">normalizePath</span>(<span class="fu">tempdir</span>(), <span class="at">winslash =</span> <span class="st">&quot;/&quot;</span>), <span class="st">&quot;/&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>site_no <span class="ot">&lt;-</span> <span class="st">&quot;01013500&quot;</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#site_no &lt;- &quot;08202700&quot;#zero flow</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="do">#### Load and pre-format data ####</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">paste0</span>(MOD_dir, site_no, <span class="st">&quot;_MOD.csv&quot;</span>), <span class="at">header =</span> <span class="cn">TRUE</span>, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>model<span class="sc">$</span>Date <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(model<span class="sc">$</span>date, <span class="at">format =</span> <span class="st">&quot;%Y-%m-%d&quot;</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>observations <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">paste0</span>(OBS_dir, site_no, <span class="st">&quot;_OBS.csv&quot;</span>), <span class="at">header =</span> <span class="cn">TRUE</span>, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>observations<span class="sc">$</span>Date <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(observations<span class="sc">$</span>date, <span class="at">format =</span> <span class="st">&quot;%Y-%m-%d&quot;</span>)</span></code></pre></div>
+<p>Preprocessing Data:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># trim daily to common POR</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>porStart <span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="fu">min</span>(model<span class="sc">$</span>Date), <span class="fu">min</span>(observations<span class="sc">$</span>Date))</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>porEnd <span class="ot">&lt;-</span> <span class="fu">min</span>(<span class="fu">max</span>(model<span class="sc">$</span>Date), <span class="fu">max</span>(observations<span class="sc">$</span>Date))</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>model <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(model, Date <span class="sc">&gt;=</span> porStart, Date <span class="sc">&lt;=</span> porEnd)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>observations <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(observations, Date <span class="sc">&gt;=</span> porStart, Date <span class="sc">&lt;=</span> porEnd)</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="do">#### Pre-process data ####</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>obs_WY <span class="ot">&lt;-</span> HyMETT<span class="sc">::</span><span class="fu">preproc_main</span>(<span class="at">Date =</span> observations<span class="sc">$</span>Date, </span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>                               <span class="at">value =</span> observations<span class="sc">$</span>streamflow_cfs,</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>                               <span class="at">date_format =</span> <span class="st">&quot;%Y-%m-%d&quot;</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>                               <span class="at">calc_WSCVD =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>mod_WY <span class="ot">&lt;-</span> HyMETT<span class="sc">::</span><span class="fu">preproc_main</span>(<span class="at">Date =</span> model<span class="sc">$</span>Date, </span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>                               <span class="at">value =</span> model<span class="sc">$</span>streamflow_cfs,</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>                               <span class="at">date_format =</span> <span class="st">&quot;%Y-%m-%d&quot;</span>,</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>                               <span class="at">calc_WSCVD =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co"># count NA (ie. no value) days</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>na_obs <span class="ot">&lt;-</span> obs_WY<span class="sc">$</span>daily<span class="sc">$</span>Date[<span class="fu">is.na</span>(obs_WY<span class="sc">$</span>daily<span class="sc">$</span>value)]</span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>na_mod <span class="ot">&lt;-</span> mod_WY<span class="sc">$</span>daily<span class="sc">$</span>Date[<span class="fu">is.na</span>(mod_WY<span class="sc">$</span>daily<span class="sc">$</span>value)]</span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a>na_all <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">c</span>(na_obs, na_mod))</span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co"># trim to complete annual data</span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a>compYears <span class="ot">&lt;-</span> <span class="fu">merge</span>(obs_WY<span class="sc">$</span>audit, mod_WY<span class="sc">$</span>audit, <span class="at">by =</span> <span class="st">&quot;WY&quot;</span>, <span class="at">all =</span> <span class="cn">TRUE</span>, <span class="at">suffixes =</span> <span class="fu">c</span>(<span class="st">&quot;.obs&quot;</span>,<span class="st">&quot;.mod&quot;</span>))</span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a>compYears <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(compYears, complete.obs <span class="sc">==</span> <span class="cn">TRUE</span>, complete.mod <span class="sc">==</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a>obs_WY<span class="sc">$</span>annual <span class="ot">&lt;-</span> obs_WY<span class="sc">$</span>annual[obs_WY<span class="sc">$</span>annual<span class="sc">$</span>WY <span class="sc">%in%</span> compYears<span class="sc">$</span>WY,]</span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a>mod_WY<span class="sc">$</span>annual <span class="ot">&lt;-</span> mod_WY<span class="sc">$</span>annual[mod_WY<span class="sc">$</span>annual<span class="sc">$</span>WY <span class="sc">%in%</span> compYears<span class="sc">$</span>WY,]</span></code></pre></div>
+<p>Trends:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="do">#### Trends in annual statistics ####</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">nrow</span>(compYears) <span class="sc">&gt;=</span> <span class="dv">8</span>){</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  obs_WY_trend <span class="ot">&lt;-</span> <span class="fu">lapply</span>(obs_WY<span class="sc">$</span>annual, </span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                         HyMETT<span class="sc">::</span>calc_annual_stat_trend, <span class="co">#FUN</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>                         <span class="at">year =</span> obs_WY<span class="sc">$</span>annual<span class="sc">$</span>WY, <span class="at">data =</span> <span class="cn">NULL</span>)       <span class="co">#args to FUN</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  obs_WY_trend <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(obs_WY_trend, <span class="at">.id =</span> <span class="st">&quot;annual_stat&quot;</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  obs_WY_trend <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(obs_WY_trend, annual_stat <span class="sc">!=</span> <span class="st">&quot;WY&quot;</span>) <span class="co">#remove WY row</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  </span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  mod_WY_trend <span class="ot">&lt;-</span> <span class="fu">lapply</span>(mod_WY<span class="sc">$</span>annual, </span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>                         HyMETT<span class="sc">::</span>calc_annual_stat_trend, <span class="co">#FUN</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>                         <span class="at">year =</span> mod_WY<span class="sc">$</span>annual<span class="sc">$</span>WY, <span class="at">data =</span> <span class="cn">NULL</span>)       <span class="co">#args to FUN</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  mod_WY_trend <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(mod_WY_trend, <span class="at">.id =</span> <span class="st">&quot;annual_stat&quot;</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>  mod_WY_trend <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(mod_WY_trend, annual_stat <span class="sc">!=</span> <span class="st">&quot;WY&quot;</span>) <span class="co">#remove WY row</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>  </span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>  <span class="co"># trend comparison</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>  comp_WY_trend <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>    <span class="at">annual_stat =</span> mod_WY_trend<span class="sc">$</span>annual_stat,</span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>    <span class="at">sen_slope_diff =</span> mod_WY_trend<span class="sc">$</span>sen_slope <span class="sc">-</span> obs_WY_trend<span class="sc">$</span>sen_slope,</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>    <span class="at">trend_mag_diff =</span> mod_WY_trend<span class="sc">$</span>trend_mag <span class="sc">-</span> obs_WY_trend<span class="sc">$</span>trend_mag,</span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>    <span class="at">val_perc_change_diff =</span> mod_WY_trend<span class="sc">$</span>val_perc_change <span class="sc">-</span> obs_WY_trend<span class="sc">$</span>val_perc_change</span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>  )</span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>  obs_WY_trend <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>  mod_WY_trend <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>  comp_WY_trend <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>}</span></code></pre></div>
+<p>Goodness of fit:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="do">#### Goodness-of-Fit statistics ####</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>gof_WY <span class="ot">&lt;-</span> <span class="fu">mapply</span>(HyMETT<span class="sc">::</span>GOF_summary, </span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                 mod_WY<span class="sc">$</span>annual, </span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                 obs_WY<span class="sc">$</span>annual, </span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>                 <span class="at">MoreArgs =</span> <span class="fu">list</span>(<span class="at">rmse_normalize =</span> <span class="st">&quot;range&quot;</span>),</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>                 <span class="at">SIMPLIFY =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>gof_WY <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(gof_WY, <span class="at">.id =</span> <span class="st">&quot;annual_stat&quot;</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>gof_WY <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(gof_WY, annual_stat <span class="sc">!=</span> <span class="st">&quot;WY&quot;</span>) <span class="co">#remove WY row</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co"># format for report-style table</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>gof_WY_report <span class="ot">&lt;-</span> tidyr<span class="sc">::</span><span class="fu">pivot_wider</span>(gof_WY, </span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>                                    <span class="at">id_cols =</span> annual_stat, </span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>                                    <span class="at">names_from =</span> metric, </span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>                                    <span class="at">values_from =</span> <span class="fu">c</span>(value, p_value))</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>gof_WY_report <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">select</span>(gof_WY_report, <span class="sc">!</span><span class="fu">c</span>(p_value_mean_absolute_error,</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>                                                 p_value_mean_error,</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>                                                 p_value_nash_sutcliffe_efficiency,</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>                                                 p_value_percent_bias,p_value_RMSE,</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>                                                 p_value_NRMSE,</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>                                                 p_value_volumetric_efficiency))</span></code></pre></div>
+<p>Period of Record:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="do">#### Period-of-record statistics ####</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="do">## POR daily metrics</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>POR_daily_obs <span class="ot">&lt;-</span> <span class="fu">POR_distribution_metrics</span>(obs_WY<span class="sc">$</span>daily<span class="sc">$</span>value)</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>POR_daily_mod <span class="ot">&lt;-</span> <span class="fu">POR_distribution_metrics</span>(mod_WY<span class="sc">$</span>daily<span class="sc">$</span>value)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co"># deseasonalized AR-1</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>ar1_obs <span class="ot">&lt;-</span> <span class="fu">POR_calc_AR1</span>(<span class="at">value =</span> <span class="fu">POR_deseasonalize</span>(<span class="at">value =</span> obs_WY<span class="sc">$</span>daily<span class="sc">$</span>value,</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>                                                  <span class="at">Date =</span> obs_WY<span class="sc">$</span>daily<span class="sc">$</span>Date,</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>                                                  <span class="at">time_step =</span> <span class="st">&quot;daily&quot;</span>),</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>                        <span class="at">Date =</span> obs_WY<span class="sc">$</span>daily<span class="sc">$</span>Date)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>ar1_mod <span class="ot">&lt;-</span> <span class="fu">POR_calc_AR1</span>(<span class="at">value =</span> <span class="fu">POR_deseasonalize</span>(<span class="at">value =</span> mod_WY<span class="sc">$</span>daily<span class="sc">$</span>value,</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>                                                  <span class="at">Date =</span> mod_WY<span class="sc">$</span>daily<span class="sc">$</span>Date,</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>                                                  <span class="at">time_step =</span> <span class="st">&quot;daily&quot;</span>),</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>                        <span class="at">Date =</span> mod_WY<span class="sc">$</span>daily<span class="sc">$</span>Date)</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>POR_daily_obs <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_row</span>(POR_daily_obs, <span class="at">metric =</span> <span class="st">&quot;lag1_autocorrelation&quot;</span>, <span class="at">value =</span> ar1_obs)</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>POR_daily_mod <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_row</span>(POR_daily_mod, <span class="at">metric =</span> <span class="st">&quot;lag1_autocorrelation&quot;</span>, <span class="at">value =</span> ar1_mod)</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="fu">rm</span>(ar1_obs, ar1_mod)</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co"># compute seasonal amplitude and phase of daily flows</span></span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>seas_obs <span class="ot">&lt;-</span> <span class="fu">POR_calc_amp_and_phase</span>(<span class="at">value =</span> obs_WY<span class="sc">$</span>daily<span class="sc">$</span>value,</span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>                                   <span class="at">Date =</span> obs_WY<span class="sc">$</span>daily<span class="sc">$</span>Date,</span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>                                   <span class="at">time_step =</span> <span class="st">&quot;daily&quot;</span>)</span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>seas_mod <span class="ot">&lt;-</span> <span class="fu">POR_calc_amp_and_phase</span>(<span class="at">value =</span> mod_WY<span class="sc">$</span>daily<span class="sc">$</span>value,</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>                                    <span class="at">Date =</span> mod_WY<span class="sc">$</span>daily<span class="sc">$</span>Date,</span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>                                    <span class="at">time_step =</span> <span class="st">&quot;daily&quot;</span>)</span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>POR_daily_obs <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_row</span>(POR_daily_obs, <span class="at">metric =</span> seas_obs<span class="sc">$</span>metric, <span class="at">value =</span> seas_obs<span class="sc">$</span>value)</span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>POR_daily_mod <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_row</span>(POR_daily_mod, <span class="at">metric =</span> seas_mod<span class="sc">$</span>metric, <span class="at">value =</span> seas_mod<span class="sc">$</span>value)</span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="fu">rm</span>(seas_obs, seas_mod)</span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co"># daily - label and combine</span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>POR_daily_obs <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_daily_obs, <span class="at">data =</span> <span class="st">&quot;observed&quot;</span>, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a>POR_daily_mod <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_daily_mod, <span class="at">data =</span> <span class="st">&quot;modeled&quot;</span>,  <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a>POR_daily_metrics <span class="ot">&lt;-</span> <span class="fu">rbind</span>(POR_daily_obs, POR_daily_mod)</span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a><span class="fu">rm</span>(POR_daily_obs, POR_daily_mod)</span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a></span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a><span class="do">## POR annual metrics</span></span>
+<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a>POR_annual_low_obs <span class="ot">&lt;-</span> <span class="fu">POR_apply_annual_lowflow_stats</span>(</span>
+<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(obs_WY<span class="sc">$</span>annual, low_q1, low_q3, low_q7, low_q30)</span>
+<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a>)</span>
+<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a>POR_annual_low_obs <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_annual_low_obs, <span class="at">data =</span> <span class="st">&quot;observed&quot;</span>, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a>POR_annual_low_mod <span class="ot">&lt;-</span> <span class="fu">POR_apply_annual_lowflow_stats</span>(</span>
+<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(mod_WY<span class="sc">$</span>annual, low_q1, low_q3, low_q7, low_q30)</span>
+<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a>)</span>
+<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a>POR_annual_low_mod <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_annual_low_mod, <span class="at">data =</span> <span class="st">&quot;modeled&quot;</span>, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a>POR_annual_min <span class="ot">&lt;-</span> <span class="fu">rbind</span>(POR_annual_low_obs, POR_annual_low_mod)</span>
+<span id="cb7-44"><a href="#cb7-44" tabindex="-1"></a><span class="fu">rm</span>(POR_annual_low_obs, POR_annual_low_mod)</span>
+<span id="cb7-45"><a href="#cb7-45" tabindex="-1"></a></span>
+<span id="cb7-46"><a href="#cb7-46" tabindex="-1"></a>POR_annual_hi_obs <span class="ot">&lt;-</span> <span class="fu">POR_apply_annual_hiflow_stats</span>(</span>
+<span id="cb7-47"><a href="#cb7-47" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(obs_WY<span class="sc">$</span>annual, high_q1, high_q3, high_q7, high_q30)</span>
+<span id="cb7-48"><a href="#cb7-48" tabindex="-1"></a>)</span>
+<span id="cb7-49"><a href="#cb7-49" tabindex="-1"></a>POR_annual_hi_obs <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_annual_hi_obs, <span class="at">data =</span> <span class="st">&quot;observed&quot;</span>, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb7-50"><a href="#cb7-50" tabindex="-1"></a>POR_annual_hi_mod <span class="ot">&lt;-</span> <span class="fu">POR_apply_annual_hiflow_stats</span>(</span>
+<span id="cb7-51"><a href="#cb7-51" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(mod_WY<span class="sc">$</span>annual, high_q1, high_q3, high_q7, high_q30)</span>
+<span id="cb7-52"><a href="#cb7-52" tabindex="-1"></a>)</span>
+<span id="cb7-53"><a href="#cb7-53" tabindex="-1"></a>POR_annual_hi_mod <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_annual_hi_mod, <span class="at">data =</span> <span class="st">&quot;modeled&quot;</span>, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb7-54"><a href="#cb7-54" tabindex="-1"></a>POR_annual_max <span class="ot">&lt;-</span> <span class="fu">rbind</span>(POR_annual_hi_obs, POR_annual_hi_mod)</span>
+<span id="cb7-55"><a href="#cb7-55" tabindex="-1"></a><span class="fu">rm</span>(POR_annual_hi_obs, POR_annual_hi_mod)</span>
+<span id="cb7-56"><a href="#cb7-56" tabindex="-1"></a></span>
+<span id="cb7-57"><a href="#cb7-57" tabindex="-1"></a><span class="do">## POR monthly metrics</span></span>
+<span id="cb7-58"><a href="#cb7-58" tabindex="-1"></a><span class="co"># monthly mean time-series</span></span>
+<span id="cb7-59"><a href="#cb7-59" tabindex="-1"></a>obs_WY<span class="sc">$</span>monthly <span class="ot">&lt;-</span> obs_WY<span class="sc">$</span>daily <span class="sc">%&gt;%</span></span>
+<span id="cb7-60"><a href="#cb7-60" tabindex="-1"></a>  <span class="fu">group_by</span>(year, month) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">summarise</span>(<span class="at">value =</span> <span class="fu">mean</span>(value))</span>
+<span id="cb7-61"><a href="#cb7-61" tabindex="-1"></a>mod_WY<span class="sc">$</span>monthly <span class="ot">&lt;-</span> mod_WY<span class="sc">$</span>daily <span class="sc">%&gt;%</span></span>
+<span id="cb7-62"><a href="#cb7-62" tabindex="-1"></a>  <span class="fu">group_by</span>(year, month) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">summarise</span>(<span class="at">value =</span> <span class="fu">mean</span>(value))</span>
+<span id="cb7-63"><a href="#cb7-63" tabindex="-1"></a><span class="co"># monthly metrics</span></span>
+<span id="cb7-64"><a href="#cb7-64" tabindex="-1"></a>POR_monthly_obs <span class="ot">&lt;-</span> <span class="fu">POR_distribution_metrics</span>(obs_WY<span class="sc">$</span>monthly<span class="sc">$</span>value)</span>
+<span id="cb7-65"><a href="#cb7-65" tabindex="-1"></a>POR_monthly_mod <span class="ot">&lt;-</span> <span class="fu">POR_distribution_metrics</span>(mod_WY<span class="sc">$</span>monthly<span class="sc">$</span>value)</span>
+<span id="cb7-66"><a href="#cb7-66" tabindex="-1"></a><span class="co"># AR-1</span></span>
+<span id="cb7-67"><a href="#cb7-67" tabindex="-1"></a>obs_WY<span class="sc">$</span>monthly<span class="sc">$</span>date_mid <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(</span>
+<span id="cb7-68"><a href="#cb7-68" tabindex="-1"></a>  <span class="fu">paste</span>(obs_WY<span class="sc">$</span>monthly<span class="sc">$</span>year, obs_WY<span class="sc">$</span>monthly<span class="sc">$</span>month, <span class="st">&quot;15&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;-&quot;</span>)</span>
+<span id="cb7-69"><a href="#cb7-69" tabindex="-1"></a>)</span>
+<span id="cb7-70"><a href="#cb7-70" tabindex="-1"></a>mod_WY<span class="sc">$</span>monthly<span class="sc">$</span>date_mid <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(</span>
+<span id="cb7-71"><a href="#cb7-71" tabindex="-1"></a>  <span class="fu">paste</span>(mod_WY<span class="sc">$</span>monthly<span class="sc">$</span>year, mod_WY<span class="sc">$</span>monthly<span class="sc">$</span>month, <span class="st">&quot;15&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;-&quot;</span>)</span>
+<span id="cb7-72"><a href="#cb7-72" tabindex="-1"></a>)</span>
+<span id="cb7-73"><a href="#cb7-73" tabindex="-1"></a>ar1_obs <span class="ot">&lt;-</span> <span class="fu">POR_calc_AR1</span>(<span class="at">value =</span> <span class="fu">POR_deseasonalize</span>(<span class="at">value =</span> obs_WY<span class="sc">$</span>monthly<span class="sc">$</span>value,</span>
+<span id="cb7-74"><a href="#cb7-74" tabindex="-1"></a>                                                  <span class="at">Date =</span>  obs_WY<span class="sc">$</span>monthly<span class="sc">$</span>date_mid,</span>
+<span id="cb7-75"><a href="#cb7-75" tabindex="-1"></a>                                                  <span class="at">time_step =</span> <span class="st">&quot;monthly&quot;</span>),</span>
+<span id="cb7-76"><a href="#cb7-76" tabindex="-1"></a>                        <span class="at">Date =</span> obs_WY<span class="sc">$</span>monthly<span class="sc">$</span>date_mid,</span>
+<span id="cb7-77"><a href="#cb7-77" tabindex="-1"></a>                        <span class="at">time_step =</span> <span class="st">&quot;monthly&quot;</span>)</span>
+<span id="cb7-78"><a href="#cb7-78" tabindex="-1"></a>ar1_mod <span class="ot">&lt;-</span> <span class="fu">POR_calc_AR1</span>(<span class="at">value =</span> <span class="fu">POR_deseasonalize</span>(<span class="at">value =</span> mod_WY<span class="sc">$</span>monthly<span class="sc">$</span>value,</span>
+<span id="cb7-79"><a href="#cb7-79" tabindex="-1"></a>                                                  <span class="at">Date =</span>  mod_WY<span class="sc">$</span>monthly<span class="sc">$</span>date_mid,</span>
+<span id="cb7-80"><a href="#cb7-80" tabindex="-1"></a>                                                  <span class="at">time_step =</span> <span class="st">&quot;monthly&quot;</span>),</span>
+<span id="cb7-81"><a href="#cb7-81" tabindex="-1"></a>                        <span class="at">Date =</span> mod_WY<span class="sc">$</span>monthly<span class="sc">$</span>date_mid,</span>
+<span id="cb7-82"><a href="#cb7-82" tabindex="-1"></a>                        <span class="at">time_step =</span> <span class="st">&quot;monthly&quot;</span>)</span>
+<span id="cb7-83"><a href="#cb7-83" tabindex="-1"></a>POR_monthly_obs <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_row</span>(</span>
+<span id="cb7-84"><a href="#cb7-84" tabindex="-1"></a>  POR_monthly_obs, <span class="at">metric =</span> <span class="st">&quot;lag1_autocorrelation&quot;</span>, <span class="at">value =</span> ar1_obs</span>
+<span id="cb7-85"><a href="#cb7-85" tabindex="-1"></a>)</span>
+<span id="cb7-86"><a href="#cb7-86" tabindex="-1"></a>POR_monthly_mod <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_row</span>(</span>
+<span id="cb7-87"><a href="#cb7-87" tabindex="-1"></a>  POR_monthly_mod, <span class="at">metric =</span> <span class="st">&quot;lag1_autocorrelation&quot;</span>, <span class="at">value =</span> ar1_mod</span>
+<span id="cb7-88"><a href="#cb7-88" tabindex="-1"></a>)</span>
+<span id="cb7-89"><a href="#cb7-89" tabindex="-1"></a><span class="fu">rm</span>(ar1_obs, ar1_mod)</span>
+<span id="cb7-90"><a href="#cb7-90" tabindex="-1"></a><span class="co"># seasonality</span></span>
+<span id="cb7-91"><a href="#cb7-91" tabindex="-1"></a>seas_obs <span class="ot">&lt;-</span> <span class="fu">POR_calc_amp_and_phase</span>(<span class="at">value =</span> obs_WY<span class="sc">$</span>monthly<span class="sc">$</span>value,</span>
+<span id="cb7-92"><a href="#cb7-92" tabindex="-1"></a>                                    <span class="at">Date =</span> obs_WY<span class="sc">$</span>monthly<span class="sc">$</span>date_mid,</span>
+<span id="cb7-93"><a href="#cb7-93" tabindex="-1"></a>                                    <span class="at">time_step=</span><span class="st">&quot;monthly&quot;</span>)</span>
+<span id="cb7-94"><a href="#cb7-94" tabindex="-1"></a>seas_mod <span class="ot">&lt;-</span> <span class="fu">POR_calc_amp_and_phase</span>(<span class="at">value =</span> mod_WY<span class="sc">$</span>monthly<span class="sc">$</span>value,</span>
+<span id="cb7-95"><a href="#cb7-95" tabindex="-1"></a>                                    <span class="at">Date =</span> mod_WY<span class="sc">$</span>monthly<span class="sc">$</span>date_mid,</span>
+<span id="cb7-96"><a href="#cb7-96" tabindex="-1"></a>                                    <span class="at">time_step=</span><span class="st">&quot;monthly&quot;</span>)</span>
+<span id="cb7-97"><a href="#cb7-97" tabindex="-1"></a>POR_monthly_obs <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_row</span>(</span>
+<span id="cb7-98"><a href="#cb7-98" tabindex="-1"></a>  POR_monthly_obs, <span class="at">metric =</span> seas_obs<span class="sc">$</span>metric, <span class="at">value =</span> seas_obs<span class="sc">$</span>value</span>
+<span id="cb7-99"><a href="#cb7-99" tabindex="-1"></a>)</span>
+<span id="cb7-100"><a href="#cb7-100" tabindex="-1"></a>POR_monthly_mod <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_row</span>(</span>
+<span id="cb7-101"><a href="#cb7-101" tabindex="-1"></a>  POR_monthly_mod, <span class="at">metric =</span> seas_mod<span class="sc">$</span>metric, <span class="at">value =</span> seas_mod<span class="sc">$</span>value</span>
+<span id="cb7-102"><a href="#cb7-102" tabindex="-1"></a>)</span>
+<span id="cb7-103"><a href="#cb7-103" tabindex="-1"></a><span class="fu">rm</span>(seas_obs, seas_mod)</span>
+<span id="cb7-104"><a href="#cb7-104" tabindex="-1"></a></span>
+<span id="cb7-105"><a href="#cb7-105" tabindex="-1"></a><span class="co"># monthly - label and combine</span></span>
+<span id="cb7-106"><a href="#cb7-106" tabindex="-1"></a>POR_monthly_obs <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_monthly_obs, <span class="at">data =</span> <span class="st">&quot;observed&quot;</span>, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb7-107"><a href="#cb7-107" tabindex="-1"></a>POR_monthly_mod <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_monthly_mod, <span class="at">data =</span> <span class="st">&quot;modeled&quot;</span>,  <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb7-108"><a href="#cb7-108" tabindex="-1"></a>POR_monthly_metrics <span class="ot">&lt;-</span> <span class="fu">rbind</span>(POR_monthly_obs, POR_monthly_mod)</span>
+<span id="cb7-109"><a href="#cb7-109" tabindex="-1"></a><span class="fu">rm</span>(POR_monthly_obs, POR_monthly_mod)</span></code></pre></div>
+<p>Logistic Regression for Zero Flows</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="do">#### Logistic regression for zero-flow annual statistics ####</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">nrow</span>(compYears) <span class="sc">&gt;=</span> <span class="dv">8</span>){</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  obs_zero <span class="ot">&lt;-</span> <span class="fu">attr</span>(obs_WY<span class="sc">$</span>annual, <span class="st">&quot;zero_flow_years&quot;</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="co"># select statistics over the zero threshold</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  obs_zero <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">select</span>(obs_WY<span class="sc">$</span>annual, <span class="st">&quot;WY&quot;</span>, </span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>                            obs_zero<span class="sc">$</span>annual_stat[obs_zero<span class="sc">$</span>over_threshold <span class="sc">==</span> <span class="cn">TRUE</span> <span class="sc">&amp;</span> </span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>                                                   <span class="sc">!</span><span class="fu">is.na</span>(obs_zero<span class="sc">$</span>over_threshold)])</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">ncol</span>(obs_zero) <span class="sc">&gt;</span> <span class="dv">1</span>){</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>    obs_WY_lr <span class="ot">&lt;-</span> <span class="fu">lapply</span>(obs_zero, </span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>                        HyMETT<span class="sc">::</span>calc_logistic_regression, </span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>                        <span class="at">year =</span> obs_zero<span class="sc">$</span>WY, <span class="at">data =</span> <span class="cn">NULL</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>    obs_WY_lr <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(obs_WY_lr, <span class="at">.id =</span> <span class="st">&quot;annual_stat&quot;</span>)</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>    obs_WY_lr <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(obs_WY_lr, annual_stat <span class="sc">!=</span> <span class="st">&quot;WY&quot;</span>) <span class="co">#remove WY row</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>  } <span class="cf">else</span>{obs_WY_lr <span class="ot">&lt;-</span> <span class="cn">NA</span>}</span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>  </span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>  mod_zero <span class="ot">&lt;-</span> <span class="fu">attr</span>(mod_WY<span class="sc">$</span>annual, <span class="st">&quot;zero_flow_years&quot;</span>)</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>  <span class="co"># select statistics over the zero threshold</span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>  mod_zero <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">select</span>(mod_WY<span class="sc">$</span>annual, <span class="st">&quot;WY&quot;</span>, </span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>                            mod_zero<span class="sc">$</span>annual_stat[mod_zero<span class="sc">$</span>over_threshold <span class="sc">==</span> <span class="cn">TRUE</span> <span class="sc">&amp;</span> </span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>                                                   <span class="sc">!</span><span class="fu">is.na</span>(mod_zero<span class="sc">$</span>over_threshold)])</span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">ncol</span>(mod_zero) <span class="sc">&gt;</span> <span class="dv">1</span>){</span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a>    mod_WY_lr <span class="ot">&lt;-</span> <span class="fu">lapply</span>(mod_zero, </span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a>                        HyMETT<span class="sc">::</span>calc_logistic_regression, </span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>                        <span class="at">year =</span> mod_zero<span class="sc">$</span>WY, <span class="at">data =</span> <span class="cn">NULL</span>)</span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a>    mod_WY_lr <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(mod_WY_lr, <span class="at">.id =</span> <span class="st">&quot;annual_stat&quot;</span>)</span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a>    mod_WY_lr <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(mod_WY_lr, annual_stat <span class="sc">!=</span> <span class="st">&quot;WY&quot;</span>) <span class="co">#remove WY row</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a>  } <span class="cf">else</span>{mod_WY_lr <span class="ot">&lt;-</span> <span class="cn">NA</span>}</span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a>  <span class="fu">rm</span>(obs_zero, mod_zero)</span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a>} <span class="cf">else</span>{</span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a>  obs_WY_lr <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a>  mod_WY_lr <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a>}</span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="fu">rm</span>(compYears)</span></code></pre></div>
+<p>Output/Saving data:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="do">#### Add site number and output tables ####</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># preproc data</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>obs_WY<span class="sc">$</span>daily <span class="ot">&lt;-</span>   tibble<span class="sc">::</span><span class="fu">add_column</span>(obs_WY<span class="sc">$</span>daily,   <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>obs_WY<span class="sc">$</span>annual <span class="ot">&lt;-</span>  tibble<span class="sc">::</span><span class="fu">add_column</span>(obs_WY<span class="sc">$</span>annual,  <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>obs_WY<span class="sc">$</span>monthly <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(obs_WY<span class="sc">$</span>monthly, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>mod_WY<span class="sc">$</span>daily <span class="ot">&lt;-</span>   tibble<span class="sc">::</span><span class="fu">add_column</span>(mod_WY<span class="sc">$</span>daily,   <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>mod_WY<span class="sc">$</span>annual <span class="ot">&lt;-</span>  tibble<span class="sc">::</span><span class="fu">add_column</span>(mod_WY<span class="sc">$</span>annual,  <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>mod_WY<span class="sc">$</span>monthly <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(mod_WY<span class="sc">$</span>monthly, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co"># trend</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(obs_WY_trend[<span class="dv">1</span>])){</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>  obs_WY_trend <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(obs_WY_trend, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>}</span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(mod_WY_trend[<span class="dv">1</span>])){</span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>  mod_WY_trend <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(mod_WY_trend, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>}</span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(comp_WY_trend[<span class="dv">1</span>])){</span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>  comp_WY_trend <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(comp_WY_trend, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a>}</span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co"># GOF</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a>gof_WY <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(gof_WY, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a>gof_WY_report <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(gof_WY_report, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co"># POR</span></span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a>POR_annual_max <span class="ot">&lt;-</span>      tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_annual_max,      <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a>POR_annual_min <span class="ot">&lt;-</span>      tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_annual_min,      <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a>POR_daily_metrics <span class="ot">&lt;-</span>   tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_daily_metrics,   <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a>POR_monthly_metrics <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(POR_monthly_metrics, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a></span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co"># Logistic Regression</span></span>
+<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(obs_WY_lr)){obs_WY_lr <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(obs_WY_lr, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)}</span>
+<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(mod_WY_lr)){mod_WY_lr <span class="ot">&lt;-</span> tibble<span class="sc">::</span><span class="fu">add_column</span>(mod_WY_lr, <span class="at">site_no =</span> site_no, <span class="at">.before =</span> <span class="dv">1</span>)}</span>
+<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a></span>
+<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a><span class="co"># output</span></span>
+<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a>  obs_WY<span class="sc">$</span>daily, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_obs_daily.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a>)</span>
+<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a>  obs_WY<span class="sc">$</span>annual, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_obs_annual.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a>)</span>
+<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a>  obs_WY<span class="sc">$</span>monthly, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_obs_monthly.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a>)</span>
+<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a>  mod_WY<span class="sc">$</span>daily, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_mod_daily.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb9-52"><a href="#cb9-52" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-53"><a href="#cb9-53" tabindex="-1"></a>)</span>
+<span id="cb9-54"><a href="#cb9-54" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-55"><a href="#cb9-55" tabindex="-1"></a>  mod_WY<span class="sc">$</span>annual, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_mod_annual.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb9-56"><a href="#cb9-56" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-57"><a href="#cb9-57" tabindex="-1"></a>)</span>
+<span id="cb9-58"><a href="#cb9-58" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-59"><a href="#cb9-59" tabindex="-1"></a>  mod_WY<span class="sc">$</span>monthly, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_mod_monthly.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb9-60"><a href="#cb9-60" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-61"><a href="#cb9-61" tabindex="-1"></a>)</span>
+<span id="cb9-62"><a href="#cb9-62" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(obs_WY_trend)){</span>
+<span id="cb9-63"><a href="#cb9-63" tabindex="-1"></a>  <span class="fu">write.table</span>(obs_WY_trend, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_obs_trend.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, </span>
+<span id="cb9-64"><a href="#cb9-64" tabindex="-1"></a>  <span class="at">quote =</span> <span class="cn">TRUE</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-65"><a href="#cb9-65" tabindex="-1"></a>}</span>
+<span id="cb9-66"><a href="#cb9-66" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(mod_WY_trend)){</span>
+<span id="cb9-67"><a href="#cb9-67" tabindex="-1"></a>  <span class="fu">write.table</span>(mod_WY_trend, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_mod_trend.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, </span>
+<span id="cb9-68"><a href="#cb9-68" tabindex="-1"></a>  <span class="at">quote =</span> <span class="cn">TRUE</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-69"><a href="#cb9-69" tabindex="-1"></a>}</span>
+<span id="cb9-70"><a href="#cb9-70" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(comp_WY_trend)){</span>
+<span id="cb9-71"><a href="#cb9-71" tabindex="-1"></a>  <span class="fu">write.table</span>(comp_WY_trend, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_com_trend.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>,</span>
+<span id="cb9-72"><a href="#cb9-72" tabindex="-1"></a>  <span class="at">quote =</span> <span class="cn">TRUE</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-73"><a href="#cb9-73" tabindex="-1"></a>}</span>
+<span id="cb9-74"><a href="#cb9-74" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-75"><a href="#cb9-75" tabindex="-1"></a>  gof_WY, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_GOF.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-76"><a href="#cb9-76" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-77"><a href="#cb9-77" tabindex="-1"></a>  gof_WY_report, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_GOF_report.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb9-78"><a href="#cb9-78" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-79"><a href="#cb9-79" tabindex="-1"></a>)</span>
+<span id="cb9-80"><a href="#cb9-80" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-81"><a href="#cb9-81" tabindex="-1"></a>  POR_annual_max, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_POR_annual_max.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb9-82"><a href="#cb9-82" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-83"><a href="#cb9-83" tabindex="-1"></a>)</span>
+<span id="cb9-84"><a href="#cb9-84" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-85"><a href="#cb9-85" tabindex="-1"></a>  POR_annual_min, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_POR_annual_min.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">quote =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb9-86"><a href="#cb9-86" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-87"><a href="#cb9-87" tabindex="-1"></a>)</span>
+<span id="cb9-88"><a href="#cb9-88" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-89"><a href="#cb9-89" tabindex="-1"></a>  POR_daily_metrics, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_POR_daily_metrics.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, </span>
+<span id="cb9-90"><a href="#cb9-90" tabindex="-1"></a>  <span class="at">quote =</span> <span class="cn">TRUE</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-91"><a href="#cb9-91" tabindex="-1"></a>)</span>
+<span id="cb9-92"><a href="#cb9-92" tabindex="-1"></a><span class="fu">write.table</span>(</span>
+<span id="cb9-93"><a href="#cb9-93" tabindex="-1"></a>  POR_monthly_metrics, <span class="at">file =</span> <span class="fu">paste0</span>(out_dir, site_no,<span class="st">&quot;_POR_monthly_metrics.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>,</span>
+<span id="cb9-94"><a href="#cb9-94" tabindex="-1"></a>  <span class="at">quote =</span> <span class="cn">TRUE</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-95"><a href="#cb9-95" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="automated-reports-at-a-single-site" class="section level3">
+<h3>Automated Reports at a Single Site</h3>
+<p>In addition to the operational scripts this package provides an
+example of an automated report that can be generated to synthesize the
+outputs from the operational script for a single site. This R Markdown
+file can be found here:
+<code>file.edit(system.file(&quot;rmd&quot;, &quot;report_single.Rmd&quot;, package = &quot;HyMETT&quot;))</code></p>
+<p>In order to run this script a number of input variables are
+required.</p>
+<ul>
+<li><p>input_folder: a string to a path where the data for building the
+report are located. This typically should be the same folder that the
+operational script outputs to.</p></li>
+<li><p>site: a string with the site number/id. This will also typically
+be the same as the site from the operational script.</p></li>
+<li><p>lat: decimal latitude of the site.</p></li>
+<li><p>long: decimal longitude of the site.</p></li>
+</ul>
+<p>This script is intended to be an example and we encourage users to
+modify this script to fit their specific needs. The output HTML file can
+be rendered with R Markdown:
+<code>rmarkdown::render(&quot;report_single.Rmd&quot;)</code></p>
+</div>
+</div>
+<div id="using-hymett-at-a-few-sites" class="section level2">
+<h2>Using HyMETT at a few sites</h2>
+<div id="running-the-provided-operational-script.-1" class="section level3">
+<h3>Running the provided operational script.</h3>
+<p>An example file for running <code>HyMETT</code> at a few sites is
+provided with the installed package, see:
+<code>file.edit(system.file(&quot;extdata&quot;, &quot;Operational_few_sites.R&quot;, package = &quot;HyMETT&quot;))</code></p>
+<p>Example data for several sites were included in this package in the
+“extdata” directory (see
+<code>system.file(&quot;extdata&quot;, package = &quot;HyMETT&quot;)</code>. One site is
+USGS site 01013500 in Maine, and the other is USGS site 08202700 in
+Texas which has many zero flow values. Both sites have observed data
+from NWIS stream gages and data from the National Water Model
+retrospective run from 1993 - 2019.</p>
+<p>The simulated and observed inputs must have 2 columns, the first
+being the date of the observation/simulation and the second being the
+streamflow value at each time step. At this time only data at a daily
+time step are allowed.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">date</th>
+<th align="right">streamflow_cfs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1993-01-01</td>
+<td align="right">428</td>
+</tr>
+<tr class="even">
+<td align="left">1993-01-02</td>
+<td align="right">423</td>
+</tr>
+<tr class="odd">
+<td align="left">1993-01-03</td>
+<td align="right">420</td>
+</tr>
+<tr class="even">
+<td align="left">1993-01-04</td>
+<td align="right">415</td>
+</tr>
+<tr class="odd">
+<td align="left">1993-01-05</td>
+<td align="right">410</td>
+</tr>
+<tr class="even">
+<td align="left">1993-01-06</td>
+<td align="right">405</td>
+</tr>
+</tbody>
+</table>
+<p>In order to run this script a number of input variables are
+required.</p>
+<ul>
+<li><p>OBS_dir is the folder that contains the observed input files. As
+a default we used the format <em>site</em>_OBS.csv for all input csv
+files, this formulation can be changed to suit the users needs.</p></li>
+<li><p>MOD_dir is the folder that contains the modeled input files. As a
+default we used the format <em>site</em>_MOD.csv for all input csv
+files, this formulation can be changed to suit the users needs.</p></li>
+<li><p>out_dir is the folder that outputs will be placed in. This folder
+must exist before the script is run. Note that if this folder has
+previous HyMETT outputs placed in it then those outputs for the same
+site will be overwritten.</p></li>
+<li><p>site_no: a vector of strings with the ids of site number of the
+target sites.</p></li>
+</ul>
+<p>Once the input data (modeled and observed) are set up in the target
+directories, the output directory is specified, and the necessary
+variables specified the example operational script should run. This
+script is intended to be an example and we encourage users to modify
+this script to fit their specific needs.</p>
+</div>
+<div id="operations-within-the-operational-script-1" class="section level3">
+<h3>Operations within the operational script</h3>
+</div>
+<div id="automated-reports-at-a-few-sites" class="section level3">
+<h3>Automated Reports at a Few Sites</h3>
+<p>In addition to the operational scripts this package provides an
+example of an automated report that can be generated to synthesize the
+outputs from the operational script for a few sites. This R Markdown
+file can be found here:
+<code>file.edit(system.file(&quot;rmd&quot;, &quot;report_single.Rmd&quot;, package = &quot;HyMETT&quot;))</code></p>
+<p>In order to run this script a number of input variables are
+required.</p>
+<ul>
+<li><p>input_folder: a string to a path where the data for building the
+report are located. This typically should be the same folder that the
+operational script outputs to.</p></li>
+<li><p>site: a vector of strings with the site numbers/ids. This will
+also typically be the same as the site from the operational
+script.</p></li>
+<li><p>lat: a vector of decimal latitude of the sites.</p></li>
+<li><p>long: a vector decimal longitude of the sites.</p></li>
+</ul>
+<p>This script is intended to be an example and we encourage users to
+modify this script to fit their specific needs. The output HTML file can
+be rendered with R Markdown:
+<code>rmarkdown::render(&quot;report_few.Rmd&quot;)</code></p>
+</div>
+</div>
+<div id="using-hymett-at-many-sites" class="section level2">
+<h2>Using HyMETT at many sites</h2>
+<div id="running-the-provided-operational-script.-2" class="section level3">
+<h3>Running the provided operational script.</h3>
+<p>An example file for running <code>HyMETT</code> at many sites is
+provided with the installed package, see:
+<code>file.edit(system.file(&quot;extdata&quot;, &quot;Operational_few_sites.R&quot;, package = &quot;HyMETT&quot;))</code></p>
+<p>Example data for several sites were included in this package in the
+“extdata” directory (see
+<code>system.file(&quot;extdata&quot;, package = &quot;HyMETT&quot;)</code>. One site is
+USGS site 01013500 in Maine, and the other is USGS site 08202700 in
+Texas which has many zero flow values. Both sites have observed data
+from NWIS stream gages and data from the National Water Model
+retrospective run from 1993 - 2019.</p>
+<p>The simulated and observed inputs must have 2 columns, the first
+being the date of the observation/simulation and the second being the
+streamflow value at each time step. At this time only data at a daily
+time step are allowed.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">date</th>
+<th align="right">streamflow_cfs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1993-01-01</td>
+<td align="right">428</td>
+</tr>
+<tr class="even">
+<td align="left">1993-01-02</td>
+<td align="right">423</td>
+</tr>
+<tr class="odd">
+<td align="left">1993-01-03</td>
+<td align="right">420</td>
+</tr>
+<tr class="even">
+<td align="left">1993-01-04</td>
+<td align="right">415</td>
+</tr>
+<tr class="odd">
+<td align="left">1993-01-05</td>
+<td align="right">410</td>
+</tr>
+<tr class="even">
+<td align="left">1993-01-06</td>
+<td align="right">405</td>
+</tr>
+</tbody>
+</table>
+<p>In order to run this script a number of input variables are
+required.</p>
+<ul>
+<li><p>OBS_dir is the folder that contains the observed input files. As
+a default we used the format <em>site</em>_OBS.csv for all input csv
+files, this formulation can be changed to suit the users needs.</p></li>
+<li><p>MOD_dir is the folder that contains the modeled input files. As a
+default we used the format <em>site</em>_MOD.csv for all input csv
+files, this formulation can be changed to suit the users needs.</p></li>
+<li><p>out_dir is the folder that outputs will be placed in. This folder
+must exist before the script is run. Note that if this folder has
+previous HyMETT outputs placed in it then those outputs for the same
+site will be overwritten.</p></li>
+</ul>
+<p>The input data required are slightly different for many sites than
+for a single or few sites. .txt files named MOD_STAIDS.txt,
+OBS_STAIDS.txt, and GAGEII_REF_STAIDS.txt are required to describe the
+all of the sites to be addressed. Example files are provided here:
+<code>system.file(&quot;extdata&quot;, package = &quot;HyMETT&quot;)</code></p>
+<ul>
+<li><p>GAGEII_REF_STAIDS.txt: This is a text file with a list of all of
+the reference gages to be evaluated. Each site needs to be on its own
+line.</p></li>
+<li><p>MOD_STAIDS.txt: This is a text file with a list of all of the
+modeled sites to be evaluated. Each site needs to be on its own line.
+Note that each line must match the observed gages for that same line
+number.</p></li>
+<li><p>OBS_STAIDS.txt: This is a text file with a list of all of the
+observed sites to be evaluated. Each site needs to be on its own line.
+Note that each line must match the modeled gages for that same line
+number.</p></li>
+</ul>
+<p>Once the input data (modeled and observed) are set up in the target
+directories, the output directory is specified, and the necessary
+variables specified the example operational script should run. This
+script is intended to be an example and we encourage users to modify
+this script to fit their specific needs.</p>
+</div>
+<div id="operations-within-the-operational-script-2" class="section level3">
+<h3>Operations within the operational script</h3>
+</div>
+<div id="automated-reports-at-many-sites" class="section level3">
+<h3>Automated Reports at Many Sites</h3>
+<p>In addition to the operational scripts this package provides an
+example of an automated report that can be generated to synthesize the
+outputs from the operational script for many sites. This R Markdown file
+can be found here:
+<code>file.edit(system.file(&quot;rmd&quot;, &quot;report_many.Rmd&quot;, package = &quot;HyMETT&quot;))</code></p>
+<p>In order to run this script a number of input variables are
+required.</p>
+<ul>
+<li><p>input_folder: a string to a path where the data for building the
+report are located. This typically should be the same folder that the
+operational script outputs to.</p></li>
+<li><p>sites: a vector of strings with the site numbers/ids. There are a
+number of ways shown at the beginning of the rmd file for how this
+vector could be produced.</p></li>
+<li><p>site_info: A string path to a site_info.csv file. This file must
+contain the site IDs as well as decimal latitude and longitude. This
+file needs to contain at least 3 columns labeled ‘site’, ‘lat’, and
+‘lon’. The site column must contain the site id for each site to be in
+the analysis. The lat and lon columns need to be the decimal latitude
+and longitude respectively.</p></li>
+</ul>
+<p>This script is intended to be an example and we encourage users to
+modify this script to fit their specific needs. The output HTML file can
+be rendered with R Markdown:
+<code>rmarkdown::render(&quot;report_many.Rmd&quot;)</code></p>
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

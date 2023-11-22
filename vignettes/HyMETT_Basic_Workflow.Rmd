@@ -1,0 +1,569 @@
+---
+title: "Basic workflow of HyMETT"
+author: "Colin Penn and Caelen Simeone"
+date: "2021-11-01"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Basic workflow of HyMETT}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(HyMETT)
+```
+
+# HyMETT
+
+HyMETT is Hydrologic Model Evaluation and Time-series Tools. It is a package with functions for evaluating hydrologic model output and hydrologic time-series data. This vignette walks you through the most basic work flows for cases with a single site, a few sites, and many sites. 
+
+
+## Installing HyMETT
+The **`HyMETT`** package requires R version 3.6.0 or higher. The package may be installed from the USGS OpenSource GitLab hosting platform ([code.usgs.gov](https://code.usgs.gov/)) using the `remotes` package. A USGS GitLab Personal Access Token (PAT) is required and can be saved in your R profile or environment as `GITLAB_PAT`. `HyMETT` and package dependencies can be installed with the following command:
+
+```r
+if (!requireNamespace("remotes")) install.packages("remotes")
+remotes::install_gitlab(repo = "hymett/hymett",
+                        auth_token = Sys.getenv("GITLAB_PAT"),
+                        host = "code.usgs.gov",
+                        build_vignettes = TRUE)
+
+```
+
+## Using HyMETT at a single site
+
+### Running the provided operational script. 
+An example file for running `HyMETT` at a single site is provided with the installed package, see:  `file.edit(system.file("extdata", "Operational_single_site.R", package = "HyMETT"))`
+
+Example data for several sites were included in this package in the "extdata" directory (see `system.file("extdata", package = "HyMETT")`. One site is USGS site 01013500 in Maine, and the other is USGS site 08202700 in Texas which has many zero flow values. Both sites have observed data from NWIS stream gages and data from the National Water Model retrospective run from 1993 - 2019. 
+
+The modeled and observed inputs must have 2 columns, the first being the date of the observation/simulation and the second being the streamflow value at each time step. At this time only data at a daily time step are allowed. 
+
+|date       | streamflow_cfs|
+|:----------|--------------:|
+|1993-01-01 |            428|
+|1993-01-02 |            423|
+|1993-01-03 |            420|
+|1993-01-04 |            415|
+|1993-01-05 |            410|
+|1993-01-06 |            405|
+
+In order to run this script a number of input variables are required. 
+
+- OBS_dir is the folder that contains the observed input files. As a default we used the format *site*_OBS.csv for all input csv files, this formulation can be changed to suit the users needs. 
+
+- MOD_dir is the folder that contains the modeled input files. As a default we used the format *site*_MOD.csv for all input csv files, this formulation can be changed to suit the users needs. 
+
+- out_dir is the folder that outputs will be placed in. This folder must exist before the script is run. Note that if this folder has previous HyMETT outputs placed in it then those outputs for the same site will be overwritten. 
+
+- site_no: a string with the id of site number of the target site.
+
+Once the input data (modeled and observed) are set up in the target directories, the output directory is specified, and the necessary variables specified the example operational script should run. This script is intended to be an example and we encourage users to modify this script to fit their specific needs. 
+
+### Operations within the operational script
+
+Input/Loading data: 
+
+```r
+
+#### Load and pre-format data ####
+##### User inputs #####
+OBS_dir <- paste0(system.file("extdata", package = "HyMETT"),"/")
+MOD_dir <- paste0(system.file("extdata", package = "HyMETT"),"/")
+out_dir <- paste0(normalizePath(tempdir(), winslash = "/"), "/")
+site_no <- "01013500"
+#site_no <- "08202700"#zero flow
+#### Load and pre-format data ####
+model <- read.csv(paste0(MOD_dir, site_no, "_MOD.csv"), header = TRUE, stringsAsFactors = FALSE)
+model$Date <- as.Date(model$date, format = "%Y-%m-%d")
+
+observations <- read.csv(paste0(OBS_dir, site_no, "_OBS.csv"), header = TRUE, stringsAsFactors = FALSE)
+observations$Date <- as.Date(observations$date, format = "%Y-%m-%d")
+
+```
+
+Preprocessing Data:
+
+```r
+# trim daily to common POR
+porStart <- max(min(model$Date), min(observations$Date))
+porEnd <- min(max(model$Date), max(observations$Date))
+
+model <- dplyr::filter(model, Date >= porStart, Date <= porEnd)
+observations <- dplyr::filter(observations, Date >= porStart, Date <= porEnd)
+
+
+
+#### Pre-process data ####
+obs_WY <- HyMETT::preproc_main(Date = observations$Date, 
+                               value = observations$streamflow_cfs,
+                               date_format = "%Y-%m-%d",
+                               calc_WSCVD = FALSE)
+
+mod_WY <- HyMETT::preproc_main(Date = model$Date, 
+                               value = model$streamflow_cfs,
+                               date_format = "%Y-%m-%d",
+                               calc_WSCVD = FALSE)
+
+# count NA (ie. no value) days
+na_obs <- obs_WY$daily$Date[is.na(obs_WY$daily$value)]
+na_mod <- mod_WY$daily$Date[is.na(mod_WY$daily$value)]
+na_all <- unique(c(na_obs, na_mod))
+
+# trim to complete annual data
+compYears <- merge(obs_WY$audit, mod_WY$audit, by = "WY", all = TRUE, suffixes = c(".obs",".mod"))
+compYears <- dplyr::filter(compYears, complete.obs == TRUE, complete.mod == TRUE)
+
+obs_WY$annual <- obs_WY$annual[obs_WY$annual$WY %in% compYears$WY,]
+mod_WY$annual <- mod_WY$annual[mod_WY$annual$WY %in% compYears$WY,]
+```
+
+Trends:
+
+```r
+
+#### Trends in annual statistics ####
+if(nrow(compYears) >= 8){
+  obs_WY_trend <- lapply(obs_WY$annual, 
+                         HyMETT::calc_annual_stat_trend, #FUN
+                         year = obs_WY$annual$WY, data = NULL)       #args to FUN
+  obs_WY_trend <- dplyr::bind_rows(obs_WY_trend, .id = "annual_stat")
+  obs_WY_trend <- dplyr::filter(obs_WY_trend, annual_stat != "WY") #remove WY row
+  
+  mod_WY_trend <- lapply(mod_WY$annual, 
+                         HyMETT::calc_annual_stat_trend, #FUN
+                         year = mod_WY$annual$WY, data = NULL)       #args to FUN
+  mod_WY_trend <- dplyr::bind_rows(mod_WY_trend, .id = "annual_stat")
+  mod_WY_trend <- dplyr::filter(mod_WY_trend, annual_stat != "WY") #remove WY row
+  
+  # trend comparison
+  comp_WY_trend <- tibble::tibble(
+    annual_stat = mod_WY_trend$annual_stat,
+    sen_slope_diff = mod_WY_trend$sen_slope - obs_WY_trend$sen_slope,
+    trend_mag_diff = mod_WY_trend$trend_mag - obs_WY_trend$trend_mag,
+    val_perc_change_diff = mod_WY_trend$val_perc_change - obs_WY_trend$val_perc_change
+  )
+} else{
+  obs_WY_trend <- NA
+  mod_WY_trend <- NA
+  comp_WY_trend <- NA
+}
+
+```
+
+Goodness of fit:
+
+```r
+
+#### Goodness-of-Fit statistics ####
+gof_WY <- mapply(HyMETT::GOF_summary, 
+                 mod_WY$annual, 
+                 obs_WY$annual, 
+                 MoreArgs = list(rmse_normalize = "range"),
+                 SIMPLIFY = FALSE)
+gof_WY <- dplyr::bind_rows(gof_WY, .id = "annual_stat")
+gof_WY <- dplyr::filter(gof_WY, annual_stat != "WY") #remove WY row
+
+# format for report-style table
+gof_WY_report <- tidyr::pivot_wider(gof_WY, 
+                                    id_cols = annual_stat, 
+                                    names_from = metric, 
+                                    values_from = c(value, p_value))
+gof_WY_report <- dplyr::select(gof_WY_report, !c(p_value_mean_absolute_error,
+                                                 p_value_mean_error,
+                                                 p_value_nash_sutcliffe_efficiency,
+                                                 p_value_percent_bias,p_value_RMSE,
+                                                 p_value_NRMSE,
+                                                 p_value_volumetric_efficiency))
+
+```
+
+Period of Record:
+
+```r
+
+#### Period-of-record statistics ####
+## POR daily metrics
+POR_daily_obs <- POR_distribution_metrics(obs_WY$daily$value)
+POR_daily_mod <- POR_distribution_metrics(mod_WY$daily$value)
+# deseasonalized AR-1
+ar1_obs <- POR_calc_AR1(value = POR_deseasonalize(value = obs_WY$daily$value,
+                                                  Date = obs_WY$daily$Date,
+                                                  time_step = "daily"),
+                        Date = obs_WY$daily$Date)
+ar1_mod <- POR_calc_AR1(value = POR_deseasonalize(value = mod_WY$daily$value,
+                                                  Date = mod_WY$daily$Date,
+                                                  time_step = "daily"),
+                        Date = mod_WY$daily$Date)
+POR_daily_obs <- tibble::add_row(POR_daily_obs, metric = "lag1_autocorrelation", value = ar1_obs)
+POR_daily_mod <- tibble::add_row(POR_daily_mod, metric = "lag1_autocorrelation", value = ar1_mod)
+rm(ar1_obs, ar1_mod)
+# compute seasonal amplitude and phase of daily flows
+seas_obs <- POR_calc_amp_and_phase(value = obs_WY$daily$value,
+                                   Date = obs_WY$daily$Date,
+                                   time_step = "daily")
+seas_mod <- POR_calc_amp_and_phase(value = mod_WY$daily$value,
+                                    Date = mod_WY$daily$Date,
+                                    time_step = "daily")
+POR_daily_obs <- tibble::add_row(POR_daily_obs, metric = seas_obs$metric, value = seas_obs$value)
+POR_daily_mod <- tibble::add_row(POR_daily_mod, metric = seas_mod$metric, value = seas_mod$value)
+rm(seas_obs, seas_mod)
+# daily - label and combine
+POR_daily_obs <- tibble::add_column(POR_daily_obs, data = "observed", .before = 1)
+POR_daily_mod <- tibble::add_column(POR_daily_mod, data = "modeled",  .before = 1)
+POR_daily_metrics <- rbind(POR_daily_obs, POR_daily_mod)
+rm(POR_daily_obs, POR_daily_mod)
+
+## POR annual metrics
+POR_annual_low_obs <- POR_apply_annual_lowflow_stats(
+  dplyr::select(obs_WY$annual, low_q1, low_q3, low_q7, low_q30)
+)
+POR_annual_low_obs <- tibble::add_column(POR_annual_low_obs, data = "observed", .before = 1)
+POR_annual_low_mod <- POR_apply_annual_lowflow_stats(
+  dplyr::select(mod_WY$annual, low_q1, low_q3, low_q7, low_q30)
+)
+POR_annual_low_mod <- tibble::add_column(POR_annual_low_mod, data = "modeled", .before = 1)
+POR_annual_min <- rbind(POR_annual_low_obs, POR_annual_low_mod)
+rm(POR_annual_low_obs, POR_annual_low_mod)
+
+POR_annual_hi_obs <- POR_apply_annual_hiflow_stats(
+  dplyr::select(obs_WY$annual, high_q1, high_q3, high_q7, high_q30)
+)
+POR_annual_hi_obs <- tibble::add_column(POR_annual_hi_obs, data = "observed", .before = 1)
+POR_annual_hi_mod <- POR_apply_annual_hiflow_stats(
+  dplyr::select(mod_WY$annual, high_q1, high_q3, high_q7, high_q30)
+)
+POR_annual_hi_mod <- tibble::add_column(POR_annual_hi_mod, data = "modeled", .before = 1)
+POR_annual_max <- rbind(POR_annual_hi_obs, POR_annual_hi_mod)
+rm(POR_annual_hi_obs, POR_annual_hi_mod)
+
+## POR monthly metrics
+# monthly mean time-series
+obs_WY$monthly <- obs_WY$daily %>%
+  group_by(year, month) %>% dplyr::summarise(value = mean(value))
+mod_WY$monthly <- mod_WY$daily %>%
+  group_by(year, month) %>% dplyr::summarise(value = mean(value))
+# monthly metrics
+POR_monthly_obs <- POR_distribution_metrics(obs_WY$monthly$value)
+POR_monthly_mod <- POR_distribution_metrics(mod_WY$monthly$value)
+# AR-1
+obs_WY$monthly$date_mid <- as.Date(
+  paste(obs_WY$monthly$year, obs_WY$monthly$month, "15", sep = "-")
+)
+mod_WY$monthly$date_mid <- as.Date(
+  paste(mod_WY$monthly$year, mod_WY$monthly$month, "15", sep = "-")
+)
+ar1_obs <- POR_calc_AR1(value = POR_deseasonalize(value = obs_WY$monthly$value,
+                                                  Date =  obs_WY$monthly$date_mid,
+                                                  time_step = "monthly"),
+                        Date = obs_WY$monthly$date_mid,
+                        time_step = "monthly")
+ar1_mod <- POR_calc_AR1(value = POR_deseasonalize(value = mod_WY$monthly$value,
+                                                  Date =  mod_WY$monthly$date_mid,
+                                                  time_step = "monthly"),
+                        Date = mod_WY$monthly$date_mid,
+                        time_step = "monthly")
+POR_monthly_obs <- tibble::add_row(
+  POR_monthly_obs, metric = "lag1_autocorrelation", value = ar1_obs
+)
+POR_monthly_mod <- tibble::add_row(
+  POR_monthly_mod, metric = "lag1_autocorrelation", value = ar1_mod
+)
+rm(ar1_obs, ar1_mod)
+# seasonality
+seas_obs <- POR_calc_amp_and_phase(value = obs_WY$monthly$value,
+                                    Date = obs_WY$monthly$date_mid,
+                                    time_step="monthly")
+seas_mod <- POR_calc_amp_and_phase(value = mod_WY$monthly$value,
+                                    Date = mod_WY$monthly$date_mid,
+                                    time_step="monthly")
+POR_monthly_obs <- tibble::add_row(
+  POR_monthly_obs, metric = seas_obs$metric, value = seas_obs$value
+)
+POR_monthly_mod <- tibble::add_row(
+  POR_monthly_mod, metric = seas_mod$metric, value = seas_mod$value
+)
+rm(seas_obs, seas_mod)
+
+# monthly - label and combine
+POR_monthly_obs <- tibble::add_column(POR_monthly_obs, data = "observed", .before = 1)
+POR_monthly_mod <- tibble::add_column(POR_monthly_mod, data = "modeled",  .before = 1)
+POR_monthly_metrics <- rbind(POR_monthly_obs, POR_monthly_mod)
+rm(POR_monthly_obs, POR_monthly_mod)
+
+```
+
+Logistic Regression for Zero Flows
+
+```r
+
+#### Logistic regression for zero-flow annual statistics ####
+if(nrow(compYears) >= 8){
+  obs_zero <- attr(obs_WY$annual, "zero_flow_years")
+  # select statistics over the zero threshold
+  obs_zero <- dplyr::select(obs_WY$annual, "WY", 
+                            obs_zero$annual_stat[obs_zero$over_threshold == TRUE & 
+                                                   !is.na(obs_zero$over_threshold)])
+  if(ncol(obs_zero) > 1){
+    obs_WY_lr <- lapply(obs_zero, 
+                        HyMETT::calc_logistic_regression, 
+                        year = obs_zero$WY, data = NULL)
+    obs_WY_lr <- dplyr::bind_rows(obs_WY_lr, .id = "annual_stat")
+    obs_WY_lr <- dplyr::filter(obs_WY_lr, annual_stat != "WY") #remove WY row
+  } else{obs_WY_lr <- NA}
+  
+  mod_zero <- attr(mod_WY$annual, "zero_flow_years")
+  # select statistics over the zero threshold
+  mod_zero <- dplyr::select(mod_WY$annual, "WY", 
+                            mod_zero$annual_stat[mod_zero$over_threshold == TRUE & 
+                                                   !is.na(mod_zero$over_threshold)])
+  if(ncol(mod_zero) > 1){
+    mod_WY_lr <- lapply(mod_zero, 
+                        HyMETT::calc_logistic_regression, 
+                        year = mod_zero$WY, data = NULL)
+    mod_WY_lr <- dplyr::bind_rows(mod_WY_lr, .id = "annual_stat")
+    mod_WY_lr <- dplyr::filter(mod_WY_lr, annual_stat != "WY") #remove WY row
+  } else{mod_WY_lr <- NA}
+  rm(obs_zero, mod_zero)
+} else{
+  obs_WY_lr <- NA
+  mod_WY_lr <- NA
+}
+rm(compYears)
+
+```
+
+Output/Saving data: 
+
+```r
+
+#### Add site number and output tables ####
+# preproc data
+obs_WY$daily <-   tibble::add_column(obs_WY$daily,   site_no = site_no, .before = 1)
+obs_WY$annual <-  tibble::add_column(obs_WY$annual,  site_no = site_no, .before = 1)
+obs_WY$monthly <- tibble::add_column(obs_WY$monthly, site_no = site_no, .before = 1)
+
+mod_WY$daily <-   tibble::add_column(mod_WY$daily,   site_no = site_no, .before = 1)
+mod_WY$annual <-  tibble::add_column(mod_WY$annual,  site_no = site_no, .before = 1)
+mod_WY$monthly <- tibble::add_column(mod_WY$monthly, site_no = site_no, .before = 1)
+
+# trend
+if(!is.na(obs_WY_trend[1])){
+  obs_WY_trend <- tibble::add_column(obs_WY_trend, site_no = site_no, .before = 1)
+}
+if(!is.na(mod_WY_trend[1])){
+  mod_WY_trend <- tibble::add_column(mod_WY_trend, site_no = site_no, .before = 1)
+}
+if(!is.na(comp_WY_trend[1])){
+  comp_WY_trend <- tibble::add_column(comp_WY_trend, site_no = site_no, .before = 1)
+}
+
+# GOF
+gof_WY <- tibble::add_column(gof_WY, site_no = site_no, .before = 1)
+gof_WY_report <- tibble::add_column(gof_WY_report, site_no = site_no, .before = 1)
+
+# POR
+POR_annual_max <-      tibble::add_column(POR_annual_max,      site_no = site_no, .before = 1)
+POR_annual_min <-      tibble::add_column(POR_annual_min,      site_no = site_no, .before = 1)
+POR_daily_metrics <-   tibble::add_column(POR_daily_metrics,   site_no = site_no, .before = 1)
+POR_monthly_metrics <- tibble::add_column(POR_monthly_metrics, site_no = site_no, .before = 1)
+
+# Logistic Regression
+if(!is.na(obs_WY_lr)){obs_WY_lr <- tibble::add_column(obs_WY_lr, site_no = site_no, .before = 1)}
+if(!is.na(mod_WY_lr)){mod_WY_lr <- tibble::add_column(mod_WY_lr, site_no = site_no, .before = 1)}
+
+# output
+write.table(
+  obs_WY$daily, file = paste0(out_dir, site_no,"_obs_daily.csv"), sep = ",", quote = TRUE, 
+  row.names = FALSE
+)
+write.table(
+  obs_WY$annual, file = paste0(out_dir, site_no,"_obs_annual.csv"), sep = ",", quote = TRUE,
+  row.names = FALSE
+)
+write.table(
+  obs_WY$monthly, file = paste0(out_dir, site_no,"_obs_monthly.csv"), sep = ",", quote = TRUE,
+  row.names = FALSE
+)
+write.table(
+  mod_WY$daily, file = paste0(out_dir, site_no,"_mod_daily.csv"), sep = ",", quote = TRUE,
+  row.names = FALSE
+)
+write.table(
+  mod_WY$annual, file = paste0(out_dir, site_no,"_mod_annual.csv"), sep = ",", quote = TRUE,
+  row.names = FALSE
+)
+write.table(
+  mod_WY$monthly, file = paste0(out_dir, site_no,"_mod_monthly.csv"), sep = ",", quote = TRUE,
+  row.names = FALSE
+)
+if(!is.na(obs_WY_trend)){
+  write.table(obs_WY_trend, file = paste0(out_dir, site_no,"_obs_trend.csv"), sep = ",", 
+  quote = TRUE, row.names = FALSE)
+}
+if(!is.na(mod_WY_trend)){
+  write.table(mod_WY_trend, file = paste0(out_dir, site_no,"_mod_trend.csv"), sep = ",", 
+  quote = TRUE, row.names = FALSE)
+}
+if(!is.na(comp_WY_trend)){
+  write.table(comp_WY_trend, file = paste0(out_dir, site_no,"_com_trend.csv"), sep = ",",
+  quote = TRUE, row.names = FALSE)
+}
+write.table(
+  gof_WY, file = paste0(out_dir, site_no,"_GOF.csv"), sep = ",", quote = TRUE, row.names = FALSE)
+write.table(
+  gof_WY_report, file = paste0(out_dir, site_no,"_GOF_report.csv"), sep = ",", quote = TRUE,
+  row.names = FALSE
+)
+write.table(
+  POR_annual_max, file = paste0(out_dir, site_no,"_POR_annual_max.csv"), sep = ",", quote = TRUE,
+  row.names = FALSE
+)
+write.table(
+  POR_annual_min, file = paste0(out_dir, site_no,"_POR_annual_min.csv"), sep = ",", quote = TRUE,
+  row.names = FALSE
+)
+write.table(
+  POR_daily_metrics, file = paste0(out_dir, site_no,"_POR_daily_metrics.csv"), sep = ",", 
+  quote = TRUE, row.names = FALSE
+)
+write.table(
+  POR_monthly_metrics, file = paste0(out_dir, site_no,"_POR_monthly_metrics.csv"), sep = ",",
+  quote = TRUE, row.names = FALSE
+)
+
+```
+
+### Automated Reports at a Single Site
+
+In addition to the operational scripts this package provides an example of an automated report that can be generated to synthesize the outputs from the operational script for a single site. This R Markdown file can be found here: `file.edit(system.file("rmd", "report_single.Rmd", package = "HyMETT"))`
+
+In order to run this script a number of input variables are required. 
+
+- input_folder: a string to a path where the data for building the report are located. This typically should be the same folder that the operational script outputs to. 
+
+- site: a string with the site number/id. This will also typically be the same as the site from the operational script. 
+
+- lat: decimal latitude of the site.
+
+- long: decimal longitude of the site. 
+
+This script is intended to be an example and we encourage users to modify this script to fit their specific needs. The output HTML file can be rendered with R Markdown: `rmarkdown::render("report_single.Rmd")`
+
+## Using HyMETT at a few sites
+
+### Running the provided operational script. 
+
+An example file for running `HyMETT` at a few sites is provided with the installed package, see:  `file.edit(system.file("extdata", "Operational_few_sites.R", package = "HyMETT"))`
+
+Example data for several sites were included in this package in the "extdata" directory (see `system.file("extdata", package = "HyMETT")`. One site is USGS site 01013500 in Maine, and the other is USGS site 08202700 in Texas which has many zero flow values. Both sites have observed data from NWIS stream gages and data from the National Water Model retrospective run from 1993 - 2019. 
+
+The simulated and observed inputs must have 2 columns, the first being the date of the observation/simulation and the second being the streamflow value at each time step. At this time only data at a daily time step are allowed. 
+
+|date       | streamflow_cfs|
+|:----------|--------------:|
+|1993-01-01 |            428|
+|1993-01-02 |            423|
+|1993-01-03 |            420|
+|1993-01-04 |            415|
+|1993-01-05 |            410|
+|1993-01-06 |            405|
+
+In order to run this script a number of input variables are required. 
+
+- OBS_dir is the folder that contains the observed input files. As a default we used the format *site*_OBS.csv for all input csv files, this formulation can be changed to suit the users needs. 
+
+- MOD_dir is the folder that contains the modeled input files. As a default we used the format *site*_MOD.csv for all input csv files, this formulation can be changed to suit the users needs. 
+
+- out_dir is the folder that outputs will be placed in. This folder must exist before the script is run. Note that if this folder has previous HyMETT outputs placed in it then those outputs for the same site will be overwritten. 
+
+- site_no: a vector of strings with the ids of site number of the target sites.
+
+Once the input data (modeled and observed) are set up in the target directories, the output directory is specified, and the necessary variables specified the example operational script should run. This script is intended to be an example and we encourage users to modify this script to fit their specific needs. 
+
+### Operations within the operational script
+
+### Automated Reports at a Few Sites
+
+In addition to the operational scripts this package provides an example of an automated report that can be generated to synthesize the outputs from the operational script for a few sites. This R Markdown file can be found here: `file.edit(system.file("rmd", "report_single.Rmd", package = "HyMETT"))`
+
+In order to run this script a number of input variables are required. 
+
+- input_folder: a string to a path where the data for building the report are located. This typically should be the same folder that the operational script outputs to. 
+
+- site: a vector of strings with the site numbers/ids. This will also typically be the same as the site from the operational script. 
+
+- lat: a vector of decimal latitude of the sites.
+
+- long: a vector decimal longitude of the sites. 
+
+This script is intended to be an example and we encourage users to modify this script to fit their specific needs. 
+The output HTML file can be rendered with R Markdown: `rmarkdown::render("report_few.Rmd")`
+
+
+
+
+
+
+
+
+## Using HyMETT at many sites
+
+### Running the provided operational script. 
+
+An example file for running `HyMETT` at many sites is provided with the installed package, see:  `file.edit(system.file("extdata", "Operational_few_sites.R", package = "HyMETT"))`
+
+Example data for several sites were included in this package in the "extdata" directory (see `system.file("extdata", package = "HyMETT")`. One site is USGS site 01013500 in Maine, and the other is USGS site 08202700 in Texas which has many zero flow values. Both sites have observed data from NWIS stream gages and data from the National Water Model retrospective run from 1993 - 2019. 
+
+The simulated and observed inputs must have 2 columns, the first being the date of the observation/simulation and the second being the streamflow value at each time step. At this time only data at a daily time step are allowed. 
+
+|date       | streamflow_cfs|
+|:----------|--------------:|
+|1993-01-01 |            428|
+|1993-01-02 |            423|
+|1993-01-03 |            420|
+|1993-01-04 |            415|
+|1993-01-05 |            410|
+|1993-01-06 |            405|
+
+In order to run this script a number of input variables are required. 
+
+- OBS_dir is the folder that contains the observed input files. As a default we used the format *site*_OBS.csv for all input csv files, this formulation can be changed to suit the users needs. 
+
+- MOD_dir is the folder that contains the modeled input files. As a default we used the format *site*_MOD.csv for all input csv files, this formulation can be changed to suit the users needs. 
+
+- out_dir is the folder that outputs will be placed in. This folder must exist before the script is run. Note that if this folder has previous HyMETT outputs placed in it then those outputs for the same site will be overwritten. 
+
+The input data required are slightly different for many sites than for a single or few sites. .txt files named MOD_STAIDS.txt, OBS_STAIDS.txt, and GAGEII_REF_STAIDS.txt are required to describe the all of the sites to be addressed. Example files are provided here: `system.file("extdata", package = "HyMETT")`
+
+- GAGEII_REF_STAIDS.txt: This is a text file with a list of all of the reference gages to be evaluated. Each site needs to be on its own line. 
+
+- MOD_STAIDS.txt: This is a text file with a list of all of the modeled sites to be evaluated. Each site needs to be on its own line. Note that each line must match the observed gages for that same line number. 
+
+- OBS_STAIDS.txt: This is a text file with a list of all of the observed sites to be evaluated. Each site needs to be on its own line. Note that each line must match the modeled gages for that same line number. 
+
+Once the input data (modeled and observed) are set up in the target directories, the output directory is specified, and the necessary variables specified the example operational script should run. This script is intended to be an example and we encourage users to modify this script to fit their specific needs. 
+
+### Operations within the operational script
+
+### Automated Reports at Many Sites
+
+In addition to the operational scripts this package provides an example of an automated report that can be generated to synthesize the outputs from the operational script for many sites. This R Markdown file can be found here: `file.edit(system.file("rmd", "report_many.Rmd", package = "HyMETT"))`
+
+In order to run this script a number of input variables are required. 
+
+- input_folder: a string to a path where the data for building the report are located. This typically should be the same folder that the operational script outputs to. 
+
+- sites: a vector of strings with the site numbers/ids. There are a number of ways shown at the beginning of the rmd file for how this vector could be produced. 
+
+- site_info: A string path to a site_info.csv file. This file must contain the site IDs as well as decimal latitude and longitude. This file needs to contain at least 3 columns labeled 'site', 'lat', and 'lon'. The site column must contain the site id for each site to be in the analysis. The lat and lon columns need to be the decimal latitude and longitude respectively. 
+
+This script is intended to be an example and we encourage users to modify this script to fit their specific needs.
+The output HTML file can be rendered with R Markdown: `rmarkdown::render("report_many.Rmd")`
