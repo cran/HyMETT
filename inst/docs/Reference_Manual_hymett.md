@@ -41,8 +41,8 @@
     Package: HyMETT
     Type: Package
     Title: Hydrologic Model Evaluation and Time-Series Tools
-    Version: 1.1.0
-    Date: 2023-10-03
+    Version: 1.1.2
+    Date: 2023-11-21
     Authors@R: c(
         person(family = "Penn",
                given = "Colin",
@@ -97,7 +97,7 @@
     Description: Facilitates the analysis and evaluation of hydrologic model output and 
         time-series data with functions focused on comparison of modeled (simulated) and observed data, 
         period-of-record statistics, and trends.  
-    URL: https://code.usgs.gov/hymett/hymett, https://hymett.code-pages.usgs.gov/hymett/
+    URL: https://code.usgs.gov/hymett/hymett
     BugReports: https://code.usgs.gov/hymett/hymett/-/issues
     Depends: R (>= 3.6.0)
     Imports:

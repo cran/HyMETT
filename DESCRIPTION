@@ -1,8 +1,8 @@
 Package: HyMETT
 Type: Package
 Title: Hydrologic Model Evaluation and Time-Series Tools
-Version: 1.1.2
-Date: 2023-11-21
+Version: 1.1.3
+Date: 2024-08-26
 Authors@R: c(
     person(family = "Penn",
            given = "Colin",
@@ -47,7 +47,7 @@ Authors@R: c(
     person(family = "Over",
            given = "Thomas",
            role = c("dtc"),
-           email = "@usgs.gov",
+           email = "tmover@usgs.gov",
            comment = c(ORCID = "0000-0001-8280-4368")),
     person(family = "Russell",
            given = "Amy",
@@ -74,9 +74,9 @@ Copyright: This software is in the public domain because it contains
         information, see the official USGS copyright policy at
         http://www.usgs.gov/visual-id/credit_usgs.html#copyright
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 NeedsCompilation: no
-Packaged: 2023-11-21 21:01:29 UTC; cpenn
+Packaged: 2024-08-28 14:59:29 UTC; cpenn
 Author: Colin Penn [aut, cre] (<https://orcid.org/0000-0002-5195-2744>),
   Caelan Simeone [aut] (<https://orcid.org/0000-0003-3263-6452>),
   Sara Levin [aut] (<https://orcid.org/0000-0002-2448-3129>),
@@ -89,4 +89,4 @@ Author: Colin Penn [aut, cre] (<https://orcid.org/0000-0002-5195-2744>),
   Amy Russell [dtc] (<https://orcid.org/0000-0003-0582-0094>)
 Maintainer: Colin Penn <cpenn@usgs.gov>
 Repository: CRAN
-Date/Publication: 2023-11-22 19:20:02 UTC
+Date/Publication: 2024-08-28 23:00:11 UTC

@@ -1,8 +1,8 @@
-3576a00b54eebfaf6b88336d7860934a *DESCRIPTION
+e72b22af3ad3ff62b53457bf3da9d34a *DESCRIPTION
 bb042c4270ada4fc745b07fc6665b500 *NAMESPACE
-071eefa5d2833c33e1aa2a125885c57f *NEWS.md
+df2316d9a6e7bad96550369d4e0875f6 *NEWS.md
 bfedd692f8864548b088ccf7789a5a45 *R/GOF_summary.R
-878c6be83e55e05784a86b8bf4561886 *R/HyMETT-package.R
+f64d879ee82babe586c0b4f70422d454 *R/HyMETT-package.R
 fc0e3a8fa5e81082672a5475cb72e9b4 *R/POR_apply_annual_hiflow_stats.R
 040721b38027cf64debce2c3a8264936 *R/POR_apply_annual_lowflow_stats.R
 3938914a06e14d311343e47b7f187ce1 *R/POR_calc_AR1.R
@@ -28,8 +28,8 @@ cddc2737047ead67dd9202600a34f2d5 *R/example_preproc.R
 32c02a4465bdf7c78e5ed4e93b96e28e *R/preproc_main.R
 66606aab42eda03160c0a540f95a232c *R/preproc_precondition_data.R
 fd31b8afd47a482a56c6356f73e4357e *R/preproc_validate_daily.R
-afbe4209b3bb961ba3e41cbfe79ea507 *build/partial.rdb
-04772f5f0607dd934f2719643e8e6749 *build/vignette.rds
+181b5ac5a69bd3e3e542680739e88fd5 *build/partial.rdb
+f6445654790554f6afd9e224c1f367cc *build/vignette.rds
 f01c6d74f1338e364c4fa3601618dd48 *data/example_annual.rda
 5f39d6cc19f57cccd8f3eb0a0c32777a *data/example_mod.rda
 46f7c36e40b40fd23b81bca30c7279e1 *data/example_mod_zf.rda
@@ -39,9 +39,9 @@ f01c6d74f1338e364c4fa3601618dd48 *data/example_annual.rda
 c9bff448a60a8bf4ce65c53ff3714711 *inst/CITATION
 88dff60859859d14fb12e58d6469c54d *inst/doc/HyMETT_Basic_Workflow.R
 3edbcf8cfa2c1d815de4bda2345903c0 *inst/doc/HyMETT_Basic_Workflow.Rmd
-78ec2869a0c995593f2c038b35bc0f71 *inst/doc/HyMETT_Basic_Workflow.html
-52fe7b8f786ff99fbc53377e5d608218 *inst/docs/Reference_Manual_hymett.md
-b24f8842ab33be656aea92b4a2916d31 *inst/docs/UserManual_hymett.pdf
+45f9e481b91cee58d19be7f79717d6bc *inst/doc/HyMETT_Basic_Workflow.html
+ed233cf5c3252e4e19faf539befa7a15 *inst/docs/Reference_Manual_hymett.md
+b505ed29fa50ccfc140bd58c6012d7a2 *inst/docs/UserManual_hymett.pdf
 cc0eef7b76096ec6c7004ccc5f1e2b0b *inst/extdata/01013500_MOD.csv
 d4d6796c55d2dad90d88e104ca18e4c1 *inst/extdata/01013500_OBS.csv
 2b68938729c25530268d3af2ad3f5378 *inst/extdata/01021470_MOD.csv
@@ -79,7 +79,7 @@ bc295938156fc74eefc5cc4aea8d0549 *man/GOF_percent_bias.Rd
 8b8cdff0bdbd7cd9ea9dfa66b5638306 *man/GOF_rmse.Rd
 8c55d353a0c52ce954635a2138e0a306 *man/GOF_summary.Rd
 efac2f271847398fb2ae0da1a804ef1a *man/GOF_volumetric_efficiency.Rd
-ed6b2e9b42ed44ae975b0f29271c61aa *man/HyMETT-package.Rd
+9e14bc382de44fea1649094e5cf4ac6f *man/HyMETT-package.Rd
 27fdd07067bda59947717c8c1e52becb *man/POR_apply_annual_hiflow_stats.Rd
 9c11e78e84546b53267cecb37370d96b *man/POR_apply_annual_lowflow_stats.Rd
 3dc1e489787a1de7c95af840fa389f87 *man/POR_calc_AR1.Rd

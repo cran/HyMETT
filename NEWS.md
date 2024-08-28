@@ -1,7 +1,12 @@
+HyMETT 1.1.3 (2024-08-26)
+==========
+* minor DESCRIPTION change required by CRAN
+
 HyMETT 1.1.2 (2023-11-21)
 ==========
 * minor DESCRIPTION changes from CRAN submission comments
 * output directory in vignette and extdata scripts set to `tempdir()`
+* released on CRAN
 
 HyMETT 1.1.0 (2023-10-03)
 ==========
